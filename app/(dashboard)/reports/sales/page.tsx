@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { BarChart3, ArrowLeft, Download, Filter, Search, Calendar } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppData } from "@/lib/client/useAppData";
 import { formatCurrency } from "@/lib/utils";
@@ -117,6 +118,7 @@ export default function SalesReportsPage() {
                 <th className="px-6 py-4 text-right">Discount</th>
                 <th className="px-6 py-4 text-right">Total</th>
                 <th className="px-6 py-4 text-center">Payment Method</th>
+                <th className="px-6 py-4 text-left">Bank Account</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
@@ -124,8 +126,12 @@ export default function SalesReportsPage() {
                 const customer = customers.find((c: any) => c.id === sale.customerId);
                 const location = locations.find((l: any) => l.id === sale.locationId);
                 return (
-                  <tr key={sale.id} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
-                    <td className="px-6 py-4 text-xs font-mono font-bold text-slate-900 dark:text-white">{sale.voucherCode}</td>
+                    <tr key={sale.id} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
+                    <td className="px-6 py-4 text-xs font-mono font-bold text-slate-900 dark:text-white">
+                      <Link href={`/sales/${sale.id}`} className="hover:text-indigo-600">
+                        {sale.voucherCode}
+                      </Link>
+                    </td>
                     <td className="px-6 py-4 text-xs text-slate-500">{new Date(sale.saleDate).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-xs font-bold text-slate-500">{customer?.name || "Walk-in Customer"}</td>
                     <td className="px-6 py-4 text-xs font-bold text-slate-500">{location?.name || "-"}</td>
@@ -145,12 +151,17 @@ export default function SalesReportsPage() {
                         {sale.paymentMethod}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-xs text-slate-500">
+                      {sale.bankAccount?.displayName
+                        ? `${sale.bankAccount.displayName}${sale.bankAccount.bankName ? ` (${sale.bankAccount.bankName})` : ""}`
+                        : sale.bankAccountId || "-"}
+                    </td>
                   </tr>
                 );
               })}
               {filteredSales.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-xs font-black uppercase tracking-widest text-slate-300">
+                  <td colSpan={9} className="px-6 py-12 text-center text-xs font-black uppercase tracking-widest text-slate-300">
                     No sales records found
                   </td>
                 </tr>

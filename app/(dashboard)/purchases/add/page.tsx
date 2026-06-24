@@ -86,9 +86,6 @@ export default function AddPurchase() {
           </div>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
-            {/* Save Draft */}
-          </button>
           <button className="flex items-center gap-2 px-2 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-500/30 hover:bg-indigo-500 transition-all active:scale-95">
             <Save className="w-4 h-4" />
             Post Purchase

@@ -249,6 +249,14 @@ export default function NewSalePage() {
       toast.error("Please select items for all lines");
       return;
     }
+    if (paymentMethod === "BANK" && !selectedBankId) {
+      toast.error("Please select a bank account for bank sales.");
+      return;
+    }
+    if (paymentMethod === "MIXED" && bankPaid > 0 && !selectedBankId) {
+      toast.error("Please select a bank account for the bank portion.");
+      return;
+    }
     const invalidQtyLine = lines.find((line) => line.qty <= 0);
     if (invalidQtyLine) {
       toast.error(
@@ -773,11 +781,7 @@ export default function NewSalePage() {
           >
             Close
           </button>
-          <div className="flex items-center gap-3">
-            <button className="px-6 py-2.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-200 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all">
-              {/* Save Draft */}
-            </button>
-            <button
+          <button
               onClick={handleSave}
               disabled={saving}
               className="flex items-center gap-2 px-4 py-3 bg-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black shadow-xl shadow-indigo-900/30 hover:bg-indigo-500 active:scale-95 transition-all uppercase tracking-widest"
@@ -811,8 +815,7 @@ export default function NewSalePage() {
                   Save Sale
                 </>
               )}
-            </button>
-          </div>
+          </button>
         </div>
       </div>
 

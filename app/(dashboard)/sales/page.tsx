@@ -90,6 +90,7 @@ export default function SalesListPage() {
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Consumer</th>
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Timeline</th>
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Protocol</th>
+                <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Bank Account</th>
                 <th className="px-6 py-4 text-right text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Magnitude</th>
                 <th className="px-6 py-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Actions</th>
@@ -98,7 +99,7 @@ export default function SalesListPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
               {filteredSales.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest opacity-50">
+                  <td colSpan={9} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest opacity-50">
                     No transactions captured
                   </td>
                 </tr>
@@ -128,6 +129,15 @@ export default function SalesListPage() {
                         <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-zinc-800 text-[9px] font-black text-slate-500 uppercase tracking-widest">
                           {sale.paymentMethod}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {sale.bankAccount?.displayName ? (
+                          <span className="inline-flex items-center rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-300">
+                            {sale.bankAccount.displayName}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-300">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right text-xs font-black text-slate-900 dark:text-zinc-100">{formatCurrency(sale.totalAmount)}</td>
                       <td className="px-6 py-4 text-center">
@@ -182,6 +192,14 @@ export default function SalesListPage() {
                   <InfoRow label="Customer" value={customers.find(c => c.id === viewSale.customerId)?.name ?? "Walk-in"} />
                   <InfoRow label="Date" value={new Date(viewSale.saleDate).toLocaleDateString()} />
                   <InfoRow label="Payment" value={viewSale.paymentMethod} />
+                  <InfoRow
+                    label="Bank Account"
+                    value={
+                      viewSale.bankAccount?.displayName
+                        ? `${viewSale.bankAccount.displayName}${viewSale.bankAccount.bankName ? ` (${viewSale.bankAccount.bankName})` : ""}`
+                        : viewSale.bankAccountId || "-"
+                    }
+                  />
                   <InfoRow label="Location" value={locations.find(l => l.id === viewSale.locationId)?.name ?? "-"} />
                   <InfoRow label="Total" value={formatCurrency(viewSale.totalAmount)} highlight />
                   <InfoRow label="Credit" value={formatCurrency(viewSale.creditAmount)} />

@@ -202,6 +202,25 @@ export async function GET() {
     }),
   ]);
 
+  const saleBankAccountBySaleId = new Map<string, { id: string; displayName: string; bankName: string | null }>();
+  bankTransactions.forEach((entry) => {
+    if (entry.type !== "SALE_PAYMENT" || !entry.referenceNo) return;
+    saleBankAccountBySaleId.set(entry.referenceNo, {
+      id: entry.bankAccount.id,
+      displayName: entry.bankAccount.displayName,
+      bankName: entry.bankAccount.bankName || null,
+    });
+  });
+
+  const salesWithBankAccounts = sales.map((sale) => {
+    const bankAccount = saleBankAccountBySaleId.get(sale.id) || null;
+    return {
+      ...sale,
+      bankAccount,
+      bankAccountId: bankAccount?.id || null,
+    };
+  });
+
   const settingValue = Object.fromEntries(settings.map((entry) => [entry.key, entry.value]));
   const stockByItemLocation = new Map<string, any>();
   batches.forEach((batch) => {
@@ -431,7 +450,7 @@ export async function GET() {
       currentBalance: account.currentBalance,
       accountType: account.accountType,
     })),
-    sales: sales.map((sale) => ({
+    sales: salesWithBankAccounts.map((sale) => ({
       id: sale.id,
       customerId: sale.customerId,
       locationId: sale.locationId,
@@ -443,7 +462,8 @@ export async function GET() {
       bankAmount: sale.bankAmount,
       creditAmount: sale.creditAmount,
       paymentMethod: sale.cashAmount > 0 && sale.bankAmount > 0 ? "MIXED" : sale.bankAmount > 0 ? "BANK" : sale.creditAmount > 0 ? "CREDIT" : "CASH",
-      bankAccountId: bankTransactions.find((tx) => tx.referenceNo === sale.id && tx.type === "SALE_PAYMENT")?.bankAccountId,
+      bankAccountId: sale.bankAccountId,
+      bankAccount: sale.bankAccount,
       items: sale.items.map((line) => ({
         id: line.id,
         itemId: line.itemId,
@@ -1032,6 +1052,10 @@ export async function POST(request: NextRequest) {
         if ((available._sum.remainingQuantity || 0) < Number(line.qty)) {
           throw new Error("Not enough stock for selected item.");
         }
+      }
+
+      if (Number(payload.bankAmount || 0) > 0 && !payload.bankAccountId) {
+        throw new Error("Please select a bank account for bank payments.");
       }
 
       const sale = await tx.sale.create({

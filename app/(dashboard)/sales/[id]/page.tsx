@@ -27,9 +27,11 @@ export default function SaleDetailPage() {
 
   const customer = customers.find((entry) => entry.id === sale.customerId);
   const location = locations.find((entry) => entry.id === sale.locationId);
-  const bankAccount = sale.bankAccountId
-    ? bankAccounts.find((entry) => entry.id === sale.bankAccountId)
-    : null;
+  const bankAccount =
+    sale.bankAccount ||
+    (sale.bankAccountId
+      ? bankAccounts.find((entry) => entry.id === sale.bankAccountId)
+      : null);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -118,7 +120,7 @@ export default function SaleDetailPage() {
             <MoneyRow label="Cash" value={sale.cashAmount} />
             <MoneyRow label="Bank" value={sale.bankAmount} />
             <MoneyRow label="Credit" value={sale.creditAmount} tone={sale.creditAmount > 0 ? "warning" : "default"} />
-            {bankAccount ? <InfoBlock label="Bank Account" value={`${bankAccount.displayName} (${bankAccount.bankName})`} /> : null}
+            {bankAccount ? <InfoBlock label="Bank Account" value={`${bankAccount.displayName}${bankAccount.bankName ? ` (${bankAccount.bankName})` : ""}`} /> : null}
             <div className="border-t border-slate-100 pt-4 dark:border-zinc-800">
               <MoneyRow label="Grand Total" value={sale.totalAmount} highlight />
             </div>

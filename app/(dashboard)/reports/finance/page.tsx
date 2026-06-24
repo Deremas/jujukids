@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState, useMemo } from "react";
 import {
   Landmark,
@@ -670,7 +671,11 @@ export default function FinanceReportsPage() {
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                   {outstandingReceivables.map((r: any) => (
                     <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
-                      <td className="px-5 py-3 text-xs font-mono font-bold text-slate-900 dark:text-white">{r.voucherCode}</td>
+                      <td className="px-5 py-3 text-xs font-mono font-bold text-slate-900 dark:text-white">
+                        <Link href={`/sales/${r.id}`} className="hover:text-indigo-600">
+                          {r.voucherCode}
+                        </Link>
+                      </td>
                       <td className="px-5 py-3 text-xs font-bold text-slate-600">{r.customerName}</td>
                       <td className="px-5 py-3 text-xs text-slate-500">{r.locationName}</td>
                       <td className="px-5 py-3 text-xs text-slate-500">{new Date(r.saleDate).toLocaleDateString()}</td>

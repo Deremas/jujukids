@@ -1,46 +1,130 @@
 "use client";
 
 import React from "react";
-import { Tag, Plus, MoreVertical, Archive } from "lucide-react";
+import { Archive, Box, Plus, Tag, Tags } from "lucide-react";
 
-const CATEGORIES = [
-  { name: "Electronics", count: 156, color: "bg-blue-500" },
-  { name: "Laptops", count: 42, color: "bg-indigo-500" },
-  { name: "Phones", count: 89, color: "bg-emerald-500" },
-  { name: "Accessories", count: 210, color: "bg-amber-500" },
+import { useAppData } from "@/lib/client/useAppData";
+
+type CategoryCard = {
+  id: string;
+  name: string;
+  count: number;
+  color: string;
+};
+
+const CARD_COLORS = [
+  "bg-blue-500",
+  "bg-indigo-500",
+  "bg-emerald-500",
+  "bg-amber-500",
+  "bg-rose-500",
+  "bg-cyan-500",
 ];
 
 export default function CategoriesPage() {
+  const { categories = [], products = [] } = useAppData();
+
+  const categoryCards = React.useMemo<CategoryCard[]>(() => {
+    return categories
+      .map((category: any, index: number) => ({
+        id: category.id,
+        name: category.name,
+        count: products.filter((product: any) => product.category === category.name).length,
+        color: CARD_COLORS[index % CARD_COLORS.length],
+      }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [categories, products]);
+
+  const uncategorizedCount = React.useMemo(() => {
+    const categoryNames = new Set(categories.map((category: any) => category.name));
+    return products.filter((product: any) => !categoryNames.has(product.category)).length;
+  }, [categories, products]);
+
+  const totalCounted = categoryCards.reduce((sum, category) => sum + category.count, 0);
+  const hasCategories = categoryCards.length > 0;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Categories</h1>
-          <p className="text-slate-500 mt-1">Organize your products into logical groups.</p>
+          <p className="mt-1 text-slate-500">
+            Live category summary from your current inventory.
+          </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-indigo-900/20 hover:bg-indigo-500 active:scale-95 transition-all">
-          <Plus className="w-4 h-4" /> New Category
+        <button className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-indigo-900/20 transition-all hover:bg-indigo-500 active:scale-95">
+          <Plus className="h-4 w-4" /> New Category
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {CATEGORIES.map((cat) => (
-          <div key={cat.name} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all group relative">
-            <button className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-              <MoreVertical className="w-4 h-4 text-slate-400" />
-            </button>
-            <div className={`w-10 h-10 ${cat.color} rounded-xl mb-4 flex items-center justify-center text-white shadow-lg`}>
-              <Tag className="w-5 h-5" />
-            </div>
-            <h4 className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">{cat.name}</h4>
-            <p className="text-xs text-slate-500 mt-1">{cat.count} products categorized</p>
-            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center text-[11px] font-bold text-slate-700 dark:text-slate-300 tracking-widest uppercase">
-              <span>View Products</span>
-              <Archive className="w-3.5 h-3.5" />
-            </div>
-          </div>
-        ))}
+      <div className="grid gap-4 md:grid-cols-3">
+        <SummaryCard icon={Tags} label="Categories" value={String(categoryCards.length)} />
+        <SummaryCard icon={Tag} label="Categorized Items" value={String(totalCounted)} />
+        <SummaryCard icon={Box} label="Uncategorized Items" value={String(uncategorizedCount)} tone={uncategorizedCount > 0 ? "warning" : "success"} />
       </div>
+
+      {!hasCategories ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+          <Archive className="mx-auto h-12 w-12 text-slate-300" />
+          <h2 className="mt-4 text-xl font-black text-slate-900 dark:text-white">No categories yet</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Create categories when you are ready. For now, all items will appear as uncategorized.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+          {categoryCards.map((category) => (
+            <div
+              key={category.id}
+              className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${category.color} text-white shadow-lg`}>
+                <Tag className="h-5 w-5" />
+              </div>
+              <h4 className="text-lg font-black text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-white">
+                {category.name}
+              </h4>
+              <p className="mt-1 text-sm text-slate-500">
+                {category.count} item{category.count === 1 ? "" : "s"} categorized
+              </p>
+              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-[11px] font-bold uppercase tracking-widest text-slate-700 dark:border-zinc-800 dark:text-slate-300">
+                <span>View Products</span>
+                <Archive className="h-3.5 w-3.5" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SummaryCard({
+  icon: Icon,
+  label,
+  value,
+  tone = "default",
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  tone?: "default" | "warning" | "success";
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <Icon
+        className={`h-5 w-5 ${
+          tone === "warning"
+            ? "text-amber-500"
+            : tone === "success"
+              ? "text-emerald-500"
+              : "text-indigo-600"
+        }`}
+      />
+      <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{value}</p>
     </div>
   );
 }
