@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "set NEXT_DIST_DIR=.next-dev&& next dev -p 3000",
-    "build": "set NEXT_DIST_DIR=.next&& next build",
+    "build": "next build --webpack",
     "start": "next start -p 3000",
-    "db:push": "prisma db push --skip-generate",
+    "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
