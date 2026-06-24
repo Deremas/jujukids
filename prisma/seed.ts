@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import { Prisma, PrismaClient } from "../lib/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
@@ -40,6 +40,7 @@ type DefaultRoleTemplate = {
 type SeedItem = {
   id: string;
   name: string;
+  code: string;
   buyingPrice: number;
   sellingPrice: number;
   quantity: number;
@@ -244,7 +245,7 @@ async function syncPermissionsAndRoles() {
 }
 
 async function seedSampleData() {
-  // â”€â”€ Locations: Only one Shop â”€â”€
+  // ── Locations: Only one Shop ──
   const mainLocation = await prisma.location.upsert({
     where: { id: "loc-shop-main" },
     update: {
@@ -261,7 +262,7 @@ async function seedSampleData() {
     },
   });
 
-  // â”€â”€ Roles for users â”€â”€
+  // ── Roles for users ──
   const [superAdminRole, salesRole] = await Promise.all([
     prisma.role.findUniqueOrThrow({ where: { name: SUPER_ADMIN_ROLE } }),
     prisma.role.findUniqueOrThrow({ where: { name: SALES_ROLE } }),
@@ -318,115 +319,141 @@ async function seedSampleData() {
     });
   }
 
-  const unitOptions = [
-    { id: "unit-pcs", name: "Pcs", shortName: "Pcs" },
-    { id: "unit-box", name: "Box", shortName: "Box" },
-    { id: "unit-kg", name: "Kg", shortName: "Kg" },
-    { id: "unit-ltr", name: "Ltr", shortName: "Ltr" },
-    { id: "unit-mtr", name: "Mtr", shortName: "Mtr" },
-    { id: "unit-set", name: "Set", shortName: "Set" },
-  ] as const;
-
-  for (const unitOption of unitOptions) {
-    await prisma.unit.upsert({
-      where: { id: unitOption.id },
-      update: {
-        name: unitOption.name,
-        shortName: unitOption.shortName,
-      },
-      create: {
-        id: unitOption.id,
-        name: unitOption.name,
-        shortName: unitOption.shortName,
-      },
-    });
-  }
-
+  // ── Category & Unit ──
   const category = await prisma.category.upsert({
-    where: { id: "cat-blank" },
-    update: { name: "" },
-    create: { id: "cat-blank", name: "" },
+    where: { id: "cat-electronics" },
+    update: {},
+    create: { id: "cat-electronics", name: "Electronics" },
   });
 
-  const pcsUnit = await prisma.unit.findUniqueOrThrow({
+  const unit = await prisma.unit.upsert({
     where: { id: "unit-pcs" },
+    update: {},
+    create: { id: "unit-pcs", name: "Pieces", shortName: "Pcs" },
   });
 
+  // ── Items ──
   const items: SeedItem[] = [
-    { id: "item-01", name: "Abacus", buyingPrice: 550, sellingPrice: 1000, quantity: 3 },
-    { id: "item-02", name: "Jumpsuit (3pc)", buyingPrice: 1600, sellingPrice: 2000, quantity: 2 },
-    { id: "item-03", name: "Baby nail trimmer", buyingPrice: 700, sellingPrice: 1000, quantity: 5 },
-    { id: "item-04", name: "ሲልከን መመገቢያ", buyingPrice: 2200, sellingPrice: 2700, quantity: 1 },
-    { id: "item-05", name: "ጡጦ ጫፍ", buyingPrice: 250, sellingPrice: 500, quantity: 2 },
-    { id: "item-06", name: "ጫማ", buyingPrice: 400, sellingPrice: 600, quantity: 3 },
-    { id: "item-07", name: "Only baby ጡጦ", buyingPrice: 400, sellingPrice: 600, quantity: 6 },
-    { id: "item-08", name: "Only baby bowl", buyingPrice: 800, sellingPrice: 1000, quantity: 3 },
-    { id: "item-09", name: "Breast pad", buyingPrice: 900, sellingPrice: 1500, quantity: 1 },
-    { id: "item-10", name: "ሲልከን ጡጦ", buyingPrice: 1000, sellingPrice: 1500, quantity: 2 },
-    { id: "item-11", name: "Electric breast pump", buyingPrice: 3250, sellingPrice: 3800, quantity: 10 },
-    { id: "item-12", name: "Thomas ሚገጣጠም መጫወቻ", buyingPrice: 3200, sellingPrice: 3800, quantity: 2 },
-    { id: "item-13", name: "Bath tub", buyingPrice: 3300, sellingPrice: 4300, quantity: 2 },
-    { id: "item-14", name: "Mama’s bag", buyingPrice: 1800, sellingPrice: 2500, quantity: 2 },
-    { id: "item-15", name: "ቲሸርት", buyingPrice: 240, sellingPrice: 267, quantity: 26 },
-    { id: "item-16", name: "ዳይፐር ቀሚስ", buyingPrice: 900, sellingPrice: 1200, quantity: 2 },
-    { id: "item-17", name: "የክርስትና ልብስ(quality)", buyingPrice: 1600, sellingPrice: 2200, quantity: 10 },
-    { id: "item-18", name: "የክርስትና ልብስ(normal)", buyingPrice: 1550, sellingPrice: 2200, quantity: 5 },
-    { id: "item-19", name: "አጥር መጫወቻ", buyingPrice: 2000, sellingPrice: 2900, quantity: 1 },
-    { id: "item-20", name: "ማቀፊያ ፎጣ", buyingPrice: 600, sellingPrice: 1000, quantity: 2 },
-    { id: "item-21", name: "Happy bed bell", buyingPrice: 2800, sellingPrice: 3400, quantity: 1 },
-    { id: "item-22", name: "የሻወር ኮፊያ", buyingPrice: 150, sellingPrice: 400, quantity: 2 },
-    { id: "item-23", name: "Chicco ማስተኛ", buyingPrice: 3200, sellingPrice: 4000, quantity: 2 },
-    { id: "item-24", name: "Tong ልብስ ሴት", buyingPrice: 1800, sellingPrice: 2400, quantity: 2 },
-    { id: "item-25", name: "ስዋድል ማቀፊያ", buyingPrice: 1500, sellingPrice: 2000, quantity: 4 },
-    { id: "item-26", name: "ሲልከን ጡጦ ሴት", buyingPrice: 4300, sellingPrice: 5000, quantity: 2 },
-    { id: "item-27", name: "Baby care kit", buyingPrice: 800, sellingPrice: 1400, quantity: 1 },
-    { id: "item-28", name: "ባለቁልፍ ማቀፊያ", buyingPrice: 1600, sellingPrice: 2000, quantity: 1 },
-    { id: "item-29", name: "Scooter", buyingPrice: 10000, sellingPrice: 11500, quantity: 1 },
-    { id: "item-30", name: "ማጥኛ table", buyingPrice: 1400, sellingPrice: 1800, quantity: 1 },
-    { id: "item-31", name: "Cactus", buyingPrice: 650, sellingPrice: 1000, quantity: 1 },
-    { id: "item-32", name: "ማስተኛ", buyingPrice: 1600, sellingPrice: 2200, quantity: 9 },
-    { id: "item-33", name: "bowling", buyingPrice: 900, sellingPrice: 1500, quantity: 2 },
-    { id: "item-34", name: "ዳይፐር ቲሸርት", buyingPrice: 315, sellingPrice: 450, quantity: 20 },
-    { id: "item-35", name: "ስካርፍ ኮፍያ", buyingPrice: 350, sellingPrice: 600, quantity: 15 },
-    { id: "item-36", name: "መመገቢያ ሰሃን", buyingPrice: 450, sellingPrice: 1000, quantity: 6 },
-    { id: "item-37", name: "የጡጦ set", buyingPrice: 2300, sellingPrice: 3200, quantity: 1 },
-    { id: "item-38", name: "grinder", buyingPrice: 5500, sellingPrice: 6800, quantity: 4 },
-    { id: "item-39", name: "3pc ኮፍያ", buyingPrice: 250, sellingPrice: 400, quantity: 2 },
-    { id: "item-40", name: "ነጭ ካልሲ", buyingPrice: 27, sellingPrice: 50, quantity: 1 },
-    { id: "item-41", name: "ካልሲ(6)", buyingPrice: 27, sellingPrice: 50, quantity: 1 },
-    { id: "item-42", name: "የእንጀራ እናት", buyingPrice: 300, sellingPrice: 500, quantity: 1 },
-    { id: "item-43", name: "ደንገል", buyingPrice: 850, sellingPrice: 1200, quantity: 6 },
-    { id: "item-44", name: "የፊት ማቀፊያ", buyingPrice: 750, sellingPrice: 1000, quantity: 2 },
-    { id: "item-45", name: "ምንጣፍ", buyingPrice: 3500, sellingPrice: 4000, quantity: 4 },
-    { id: "item-46", name: "ዉሻ አሻንጉሊት", buyingPrice: 450, sellingPrice: 800, quantity: 3 },
-    { id: "item-47", name: "መጠራረጊያ ፎጣ", buyingPrice: 300, sellingPrice: 500, quantity: 3 },
-    { id: "item-48", name: "8pc ልብስ(ዉድ)", buyingPrice: 3200, sellingPrice: 400, quantity: 1 },
-    { id: "item-49", name: "7pc ጡጦ set", buyingPrice: 1600, sellingPrice: 2500, quantity: 1 },
-    { id: "item-50", name: "Infantino ማዘያ", buyingPrice: 2750, sellingPrice: 3200, quantity: 1 },
+    {
+      id: "item-1000mah-pb",
+      name: "1000 mAh powerbank",
+      code: "PB001",
+      buyingPrice: 5090,
+      sellingPrice: 7000,
+      quantity: 5,
+    },
+    {
+      id: "item-5000mah-pb",
+      name: "5000 mAh powerbank",
+      code: "PB002",
+      buyingPrice: 3550,
+      sellingPrice: 5500,
+      quantity: 5,
+    },
+    {
+      id: "item-cat-headset",
+      name: "Cat headset",
+      code: "HS001",
+      buyingPrice: 3950,
+      sellingPrice: 6500,
+      quantity: 5,
+    },
+    {
+      id: "item-lenovo-earphone",
+      name: "Lenovo earphone",
+      code: "EP001",
+      buyingPrice: 3610,
+      sellingPrice: 5100,
+      quantity: 3,
+    },
+    {
+      id: "item-hexagon-earphone",
+      name: "Hexagon earphone",
+      code: "EP002",
+      buyingPrice: 3350,
+      sellingPrice: 4850,
+      quantity: 4,
+    },
+    {
+      id: "item-evil-earphone",
+      name: "Evil earphone",
+      code: "EP003",
+      buyingPrice: 6440,
+      sellingPrice: 9000,
+      quantity: 2,
+    },
+    {
+      id: "item-car-charger-mod",
+      name: "Car charger modulator",
+      code: "CC001",
+      buyingPrice: 3990,
+      sellingPrice: 5500,
+      quantity: 2,
+    },
+    {
+      id: "item-sound-core-speaker",
+      name: "Sound core speaker",
+      code: "SP001",
+      buyingPrice: 0,
+      sellingPrice: 0,
+      quantity: 0,
+    },
+    {
+      id: "item-hp-speaker",
+      name: "HP speaker",
+      code: "SP002",
+      buyingPrice: 3220,
+      sellingPrice: 5700,
+      quantity: 1,
+    },
+    {
+      id: "item-xo-speaker",
+      name: "XO speaker",
+      code: "SP003",
+      buyingPrice: 3930,
+      sellingPrice: 6400,
+      quantity: 2,
+    },
+    {
+      id: "item-car-mouse",
+      name: "Car mouse",
+      code: "MS001",
+      buyingPrice: 0,
+      sellingPrice: 0,
+      quantity: 0,
+    },
+    {
+      id: "item-mic",
+      name: "Mic",
+      code: "MC001",
+      buyingPrice: 0,
+      sellingPrice: 0,
+      quantity: 0,
+    },
   ];
 
-  for (const [index, sampleItem] of items.entries()) {
-    const itemId = `item-${String(index + 1).padStart(2, "0")}`;
+  for (const sampleItem of items) {
     const item = await prisma.item.upsert({
-      where: { id: itemId },
+      where: { id: sampleItem.id },
       update: {},
       create: {
-        id: itemId,
+        id: sampleItem.id,
         name: sampleItem.name,
+        code: sampleItem.code,
         categoryId: category.id,
-        unitId: pcsUnit.id,
+        unitId: unit.id,
         defaultBuyingPrice: sampleItem.buyingPrice,
         defaultSellingPrice: sampleItem.sellingPrice,
-        lowStockAlert: 7,
       },
     });
 
+    // Only create inventory batch if quantity > 0
     if (sampleItem.quantity > 0) {
       await prisma.inventoryBatch.upsert({
-        where: { id: `${itemId}-batch-main` },
+        where: { id: `${sampleItem.id}-batch-main` },
         update: {},
         create: {
-          id: `${itemId}-batch-main`,
+          id: `${sampleItem.id}-batch-main`,
           itemId: item.id,
           locationId: mainLocation.id,
           quantityIn: sampleItem.quantity,
@@ -439,7 +466,7 @@ async function seedSampleData() {
     }
   }
 
-  // â”€â”€ Cash Account Only â”€â”€
+  // ── Cash Account Only ──
   const cashAccount: SeedBankAccount = {
     id: "cash-main",
     accountType: "CASH",
@@ -455,12 +482,12 @@ async function seedSampleData() {
     create: cashAccount,
   });
 
-  // â”€â”€ Settings â”€â”€
+  // ── Settings ──
   const settings: SeedSetting[] = [
-    { key: "companyName", value: "Juju Kids Ltd" },
+    { key: "companyName", value: "Juju Kids" },
     { key: "currency", value: "ETB" },
     { key: "taxRate", value: "0" },
-    { key: "lowStockThreshold", value: "7" },
+    { key: "lowStockThreshold", value: "10" },
   ];
 
   for (const setting of settings) {
@@ -486,5 +513,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-

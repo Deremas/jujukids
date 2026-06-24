@@ -1,6 +1,6 @@
 # Juju Kids
 
-Retail stock, sales, purchasing, and finance management built with Next.js and Prisma.
+Kids retail inventory, sales, purchasing, and business management platform built with Next.js and Prisma.
 
 ## Run Locally
 

@@ -6,7 +6,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Juju Kids",
-  description: "Juju Kids - Retail Management System",
+  description:
+    "Juju Kids offers quality children's clothing, accessories, and retail products with a seamless shopping experience for parents and families.",
   icons: {
     icon: "/favicon.ico",
   },

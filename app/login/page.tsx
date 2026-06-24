@@ -79,7 +79,7 @@ export default function LoginPage() {
               Juju Kids
             </h1>
             <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1 opacity-70">
-              Retail Management System
+              Clothing • Accessories • Kids Essentials
             </p>
           </motion.div>
         </div>

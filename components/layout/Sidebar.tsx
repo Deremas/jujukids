@@ -380,7 +380,7 @@ export function Sidebar({
     >
       <div className="p-6 flex items-center gap-3 shrink-0">
         <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white flex-shrink-0">
-          JK
+          C
         </div>
         <span className="font-semibold tracking-tight text-lg text-slate-900 dark:text-white truncate">
           Juju Kids

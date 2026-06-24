@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
@@ -58,6 +59,10 @@ async function getActorId(currentUser?: any) {
 
 function asDate(value: unknown) {
   return value ? new Date(String(value)) : new Date();
+}
+
+function generateReference(prefix: string) {
+  return `${prefix}-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 }
 
 function hasPermission(currentUser: any, key: string) {
@@ -939,12 +944,12 @@ export async function POST(request: NextRequest) {
 
   if (action === "addPurchase") {
     const result = await prisma.$transaction(async (tx) => {
+      const purchaseRef = generateReference("P");
       const purchase = await tx.purchase.create({
         data: {
-          id: payload.id,
           supplierId: payload.supplierId,
           locationId: payload.locationId,
-          invoiceNo: payload.id,
+          invoiceNo: purchaseRef,
           purchaseDate: asDate(payload.purchaseDate),
           totalAmount: Number(payload.totalAmount),
           paidAmount: Number(payload.paidAmount || 0),
@@ -1013,11 +1018,12 @@ export async function POST(request: NextRequest) {
       }
       return purchase;
     });
-    return NextResponse.json({ ok: true, id: result.id });
+    return NextResponse.json({ ok: true, id: result.id, invoiceNo: result.invoiceNo });
   }
 
   if (action === "addSale") {
     const result = await prisma.$transaction(async (tx) => {
+      const saleRef = generateReference("S");
       for (const line of payload.items) {
         const available = await tx.inventoryBatch.aggregate({
           where: { itemId: line.itemId, locationId: payload.locationId, remainingQuantity: { gt: 0 } },
@@ -1030,10 +1036,9 @@ export async function POST(request: NextRequest) {
 
       const sale = await tx.sale.create({
         data: {
-          id: payload.id,
           locationId: payload.locationId,
           customerId: payload.customerId || null,
-          voucherCode: payload.id,
+          voucherCode: saleRef,
           saleDate: asDate(payload.saleDate),
           subTotal: Number(payload.subTotal),
           discount: Number(payload.discount || 0),
@@ -1112,7 +1117,7 @@ export async function POST(request: NextRequest) {
       }
       return sale;
     });
-    return NextResponse.json({ ok: true, id: result.id });
+    return NextResponse.json({ ok: true, id: result.id, voucherCode: result.voucherCode });
   }
 
   if (action === "addCustomerPayment" || action === "settleCredit") {
