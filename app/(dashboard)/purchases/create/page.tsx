@@ -25,7 +25,7 @@ export default function NewPurchasePage() {
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user as any;
-  const { items, categories = [], units = [], suppliers, addSupplier, addItem, bankAccounts, addPurchase, locations, currentLocation } = useAppData();
+  const { items = [], products = [], categories = [], units = [], suppliers, addSupplier, addItem, bankAccounts, addPurchase, locations, currentLocation } = useAppData();
   const [purchaseDate, setPurchaseDate] = useState("");
   const [selectedSupplierId, setSelectedSupplierId] = useState(NO_SUPPLIER_ID);
   const [selectedLocationId, setSelectedLocationId] = useState(currentLocation?.id || "");
@@ -51,6 +51,15 @@ export default function NewPurchasePage() {
   // New Item state
   const [newItem, setNewItem] = useState({ name: "", code: "", categoryId: "", price: 0, unitId: "" });
   const [saving, setSaving] = useState(false);
+
+  const itemCatalog = useMemo(() => {
+    if (products.length > 0) return products;
+    const byId = new Map<string, any>();
+    items.forEach((item: any) => {
+      if (!byId.has(item.id)) byId.set(item.id, item);
+    });
+    return [...byId.values()];
+  }, [items, products]);
 
   React.useEffect(() => {
     setMounted(true);
@@ -85,7 +94,7 @@ export default function NewPurchasePage() {
     setLines(lines.map(line => {
       if (line.id === id) {
         if (field === 'itemId') {
-          const item = items.find(i => i.id === value);
+          const item = itemCatalog.find((entry: any) => entry.id === value);
           return { 
             ...line, 
             itemId: value, 
@@ -111,13 +120,12 @@ export default function NewPurchasePage() {
     }
   };
 
-  const handleQuickAddItem = () => {
-    if (newItem.name && selectedLocationId && newItem.categoryId && newItem.unitId) {
-      const id = Math.random().toString(36).substr(2, 9);
+  const handleQuickAddItem = async () => {
+    if (newItem.name && selectedLocationId && newItem.unitId) {
       const generatedCode = newItem.code || "ITEM-" + Math.random().toString(36).substr(2, 6).toUpperCase();
       const fullItem = { 
         ...newItem, 
-        id, 
+        price: 0,
         stock: 0, 
         status: "Active", 
         code: generatedCode,
@@ -125,7 +133,26 @@ export default function NewPurchasePage() {
         categoryId: newItem.categoryId,
         unitId: newItem.unitId,
       };
-      addItem(fullItem);
+      const result = await addItem(fullItem);
+      if (result?.id) {
+        const firstEmptyLine = lines.find((line) => !line.itemId)?.id || lines[0]?.id;
+        if (firstEmptyLine) {
+          const unit = units.find((entry: any) => entry.id === newItem.unitId);
+          setLines((current) =>
+            current.map((line) =>
+              line.id === firstEmptyLine
+                ? {
+                    ...line,
+                    itemId: result.id,
+                    itemName: newItem.name,
+                    unit: unit?.shortName || unit?.name || "",
+                    sellingPrice: 0,
+                  }
+                : line,
+            ),
+          );
+        }
+      }
       setShowItemModal(false);
       setNewItem({ name: "", code: "", categoryId: "", price: 0, unitId: "" });
     }
@@ -287,10 +314,10 @@ export default function NewPurchasePage() {
                           value={line.itemId}
                           onChange={(value) => updateLine(line.id, 'itemId', value)}
                           placeholder="Select Item"
-                          options={items.filter(i => i.locationId === selectedLocationId).map(item => ({
+                          options={itemCatalog.map((item: any) => ({
                             value: item.id,
                             label: item.name,
-                            meta: `${item.unit} - ${item.category}`,
+                            meta: `${item.unitShortName || item.unit || ""}${item.category && item.category !== "-" ? ` - ${item.category}` : ""}`,
                           }))}
                         />
                       </div>
@@ -645,7 +672,7 @@ export default function NewPurchasePage() {
                         onChange={(e) => setNewItem({...newItem, categoryId: e.target.value})}
                         className="w-full px-4 pr-10 py-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none appearance-none font-bold"
                       >
-                        <option value="" disabled>Select Category</option>
+                        <option value="">No Category</option>
                         {categories.map((category: any) => (
                           <option key={category.id} value={category.id}>{category.name}</option>
                         ))}
@@ -654,8 +681,7 @@ export default function NewPurchasePage() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
+                <div className="space-y-1.5 max-w-xs">
                     <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Base Unit</label>
                     <div className="relative">
                       <select 
@@ -670,18 +696,6 @@ export default function NewPurchasePage() {
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Selling Price (ETB)</label>
-                    <input 
-                      type="text" 
-                      placeholder="0" 
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none font-mono text-indigo-600 font-bold"
-                      value={formatNumberWithCommas(newItem.price)}
-                      onChange={(e) => setNewItem({...newItem, price: parseCommaNumber(e.target.value)})}
-                      onFocus={(e) => e.target.select()}
-                    />
-                  </div>
                 </div>
               </div>
               <div className="p-6 bg-slate-50/50 dark:bg-zinc-950/50 flex gap-3">
