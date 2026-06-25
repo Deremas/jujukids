@@ -1,29 +1,56 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  BarChart3, 
-  Search, 
-  Filter, 
-  Calendar, 
-  ChevronLeft, 
-  ChevronRight,
+import {
+  Search,
+  Filter,
   Package,
-  ArrowUpRight,
   User,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import Link from "next/link";
 
-const SOLD_ITEMS = [
-  { id: "1", name: "Apple iPhone 15 Pro", qty: 2, price: 54000, total: 108000, date: "2024-05-18 10:45", location: "Bole Shop", customer: "Ahmed Mohammed" },
-  { id: "2", name: "Sony Headphones WH-1000XM5", qty: 1, price: 18500, total: 18500, date: "2024-05-18 11:20", location: "Main Store", customer: "Walk-in" },
-  { id: "3", name: "Dell XPS 15", qty: 1, price: 95000, total: 95000, date: "2024-05-17 09:12", location: "Megenagna Store", customer: "Mubarek Tech" },
-  { id: "4", name: "Logitech MX Master 3S", qty: 5, price: 4200, total: 21000, date: "2024-05-17 14:55", location: "Bole Shop", customer: "OfficeX" },
-];
+import { formatCurrency } from "@/lib/utils";
+import { useAppData } from "@/lib/client/useAppData";
 
 export default function SoldItems() {
+  const { sales = [], products = [], items = [], customers = [], locations = [] } = useAppData();
   const [search, setSearch] = useState("");
+  const [locationId, setLocationId] = useState("");
+
+  const soldItems = React.useMemo(() => {
+    const rows = sales.flatMap((sale: any) => {
+      const customer = customers.find((entry: any) => entry.id === sale.customerId);
+      const location = locations.find((entry: any) => entry.id === sale.locationId);
+      return (sale.items || []).map((line: any) => {
+        const product = products.find((entry: any) => entry.id === line.itemId) || items.find((entry: any) => entry.id === line.itemId);
+        return {
+          id: line.id || `${sale.id}-${line.itemId}`,
+          saleId: sale.id,
+          itemId: line.itemId,
+          name: product?.name || "Unknown item",
+          code: product?.code || "",
+          qty: Number(line.qty || 0),
+          unit: product?.unitShortName || product?.unit || "",
+          price: Number(line.price || 0),
+          total: Number(line.total || 0),
+          date: sale.saleDate,
+          locationId: sale.locationId,
+          location: location?.name || "Unknown location",
+          customer: customer?.name || "Walk-in",
+        };
+      });
+    });
+    const term = search.trim().toLowerCase();
+    return rows
+      .filter((row: any) => !locationId || row.locationId === locationId)
+      .filter((row: any) => !term || `${row.name} ${row.code} ${row.customer} ${row.location} ${row.saleId}`.toLowerCase().includes(term))
+      .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [sales, products, items, customers, locations, locationId, search]);
+
+  const totalPageValue = soldItems.reduce((sum: number, item: any) => sum + item.total, 0);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -32,36 +59,35 @@ export default function SoldItems() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Sold Items History</h1>
           <p className="text-slate-500 text-sm">Granular view of all inventory exits and sales transactions.</p>
         </div>
-        <div className="flex gap-2">
-           <button className="px-4 py-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-bold text-slate-600 dark:text-zinc-300 hover:bg-slate-200 transition-all">
-             Export CSV
-           </button>
-           <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-500 shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
-             Print Batch
-           </button>
-        </div>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-           <div className="relative flex-1 max-w-lg font-sans">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search by product name, customer or voucher..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-sm outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-              />
-           </div>
-           <div className="flex gap-2">
-              <select className="bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-[10px] font-bold uppercase tracking-widest text-slate-500 p-2 outline-none">
-                 <option>All Shops/Stores</option>
-                 <option>Main Store</option>
-                 <option>Bole Shop</option>
-              </select>
-              <button className="p-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-slate-50 dark:bg-zinc-950 text-slate-400 hover:text-slate-900 transition-colors">
-                 <Filter className="w-4 h-4" />
-              </button>
-           </div>
+          <div className="relative flex-1 max-w-lg font-sans">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by product name, customer or voucher..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-sm outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+            />
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={locationId}
+              onChange={(event) => setLocationId(event.target.value)}
+              className="bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-[10px] font-bold uppercase tracking-widest text-slate-500 p-2 outline-none"
+            >
+              <option value="">All Shops/Stores</option>
+              {locations.map((location: any) => (
+                <option key={location.id} value={location.id}>{location.name}</option>
+              ))}
+            </select>
+            <button className="p-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-slate-50 dark:bg-zinc-950 text-slate-400 hover:text-slate-900 transition-colors">
+              <Filter className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -79,31 +105,35 @@ export default function SoldItems() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-              {SOLD_ITEMS.map((item) => (
+              {soldItems.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-14 text-center text-sm font-bold text-slate-400">
+                    No sold items found.
+                  </td>
+                </tr>
+              ) : soldItems.map((item: any) => (
                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/20 transition-colors font-sans">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-400">
-                          <Package className="w-4 h-4" />
-                       </div>
-                       <div>
-                          <p className="text-sm font-bold text-slate-800 dark:text-zinc-200 truncate max-w-[200px]">{item.name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono tracking-tighter">SKU-PRD-{item.id.padStart(4, "0")}</p>
-                       </div>
+                      <div className="w-8 h-8 rounded bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-400">
+                        <Package className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800 dark:text-zinc-200 truncate max-w-[200px]">{item.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{item.code || item.itemId}</p>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-zinc-400 text-xs">
-                       <User className="w-3 h-3 text-slate-300" />
-                       {item.customer}
+                      <User className="w-3 h-3 text-slate-300" />
+                      {item.customer}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">{item.qty}</span>
+                    <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">{item.qty} {item.unit}</span>
                   </td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-500">
-                    {formatCurrency(item.price)}
-                  </td>
+                  <td className="px-6 py-4 text-xs font-mono text-slate-500">{formatCurrency(item.price)}</td>
                   <td className="px-6 py-4">
                     <p className="text-sm font-black text-indigo-600 dark:text-indigo-400">{formatCurrency(item.total)}</p>
                   </td>
@@ -111,12 +141,12 @@ export default function SoldItems() {
                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">{item.location}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-[10px] font-medium text-slate-400 whitespace-nowrap">{item.date}</p>
+                    <p className="text-[10px] font-medium text-slate-400 whitespace-nowrap">{new Date(item.date).toLocaleString()}</p>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg text-slate-300 hover:text-indigo-600 transition-all">
-                       <ExternalLink className="w-4 h-4" />
-                    </button>
+                    <Link href={`/sales/${item.saleId}`} className="inline-flex p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg text-slate-300 hover:text-indigo-600 transition-all">
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -125,14 +155,14 @@ export default function SoldItems() {
         </div>
 
         <div className="p-4 bg-slate-50 dark:bg-zinc-950/30 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between">
-           <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest">Total Page Value: </span>
-              <span className="text-xs font-black text-indigo-600">{formatCurrency(242500)}</span>
-           </div>
-           <div className="flex items-center gap-2">
-              <button className="p-1 border border-slate-200 dark:border-zinc-800 rounded disabled:opacity-30" disabled><ChevronLeft className="w-4 h-4" /></button>
-              <button className="p-1 border border-slate-200 dark:border-zinc-800 rounded hover:border-slate-400 transition-colors"><ChevronRight className="w-4 h-4" /></button>
-           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest">Total Page Value: </span>
+            <span className="text-xs font-black text-indigo-600">{formatCurrency(totalPageValue)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="p-1 border border-slate-200 dark:border-zinc-800 rounded disabled:opacity-30" disabled><ChevronLeft className="w-4 h-4" /></button>
+            <button className="p-1 border border-slate-200 dark:border-zinc-800 rounded disabled:opacity-30" disabled><ChevronRight className="w-4 h-4" /></button>
+          </div>
         </div>
       </div>
     </div>

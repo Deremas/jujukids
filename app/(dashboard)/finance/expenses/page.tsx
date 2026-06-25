@@ -7,10 +7,6 @@ import { useAppData } from "@/lib/client/useAppData";
 import { motion, AnimatePresence } from "motion/react";
 import { useSession } from "next-auth/react";
 
-const CATEGORIES = [
-  "Rent", "Utilities", "Salaries", "Supplies", "Marketing", "Travel", "Maintenance", "Tax", "Others"
-];
-
 export default function ExpensesPage() {
   const { data: session } = useSession();
   const user = session?.user as any;
@@ -58,6 +54,10 @@ export default function ExpensesPage() {
   });
 
   const availableLocations = user?.role === 'Super Admin' ? locations : locations.filter(b => user?.assignedLocations.includes(b.id));
+  const categorySuggestions = React.useMemo<string[]>(
+    () => Array.from(new Set<string>((expenses || []).map((expense: any) => String(expense.category || "").trim()).filter(Boolean))).sort(),
+    [expenses],
+  );
 
   return (
     <>
@@ -193,14 +193,16 @@ export default function ExpensesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Category</label>
-                    <select 
+                    <input
+                      list="expense-category-suggestions"
                       value={formData.category}
                       onChange={(e) => setFormData({...formData, category: e.target.value})}
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all font-bold"
-                    >
-                      <option value="" disabled>Select Category</option>
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                      placeholder="Type category"
+                    />
+                    <datalist id="expense-category-suggestions">
+                      {categorySuggestions.map((category) => <option key={category} value={category} />)}
+                    </datalist>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Amount (ETB)</label>

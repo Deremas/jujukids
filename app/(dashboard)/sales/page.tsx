@@ -15,6 +15,31 @@ export default function SalesListPage() {
   const [search, setSearch] = useState("");
   const [viewSale, setViewSale] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const saleToDelete = deleteId ? sales.find((sale: any) => sale.id === deleteId) : null;
+  const deleteRestoreQty = saleToDelete?.items?.reduce((sum: number, item: any) => sum + Number(item.qty || 0), 0) || 0;
+
+  const closeDeleteModal = () => {
+    if (isDeleting) return;
+    setDeleteId(null);
+    setDeleteError("");
+  };
+
+  const confirmDeleteSale = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteSale(deleteId);
+      setDeleteId(null);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Failed to delete sale.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const filteredSales = sales
     .map((sale, index) => ({ sale, index }))
@@ -155,7 +180,10 @@ export default function SalesListPage() {
                             <Eye className="w-4 h-4" />
                           </Link>
                           <button
-                            onClick={() => setDeleteId(sale.id)}
+                            onClick={() => {
+                              setDeleteId(sale.id);
+                              setDeleteError("");
+                            }}
                             title="Delete"
                             className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors text-slate-400 hover:text-rose-600 cursor-pointer"
                           >
@@ -225,18 +253,28 @@ export default function SalesListPage() {
       <AnimatePresence>
         {deleteId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDeleteId(null)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeDeleteModal} />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-xl z-10 w-full max-w-sm space-y-4 border border-slate-200 dark:border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-rose-100 dark:bg-rose-900/30 rounded-xl"><Trash2 className="w-5 h-5 text-rose-600" /></div>
                 <div>
-                  <h3 className="font-black text-slate-900 dark:text-white">Delete Sale</h3>
+                  <h3 className="font-black text-slate-900 dark:text-white">Delete Sale & Restore Stock</h3>
                   <p className="text-[11px] text-slate-500">This action cannot be undone.</p>
                 </div>
               </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-[11px] font-bold leading-5 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                This will delete sale <span className="font-black">{deleteId}</span>, return {deleteRestoreQty} sold item(s) to stock, remove its SALE stock movements, and reverse any bank payment balance for this sale.
+              </div>
+              {deleteError && (
+                <p className="rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-600 dark:bg-rose-950/30 dark:text-rose-300">
+                  {deleteError}
+                </p>
+              )}
               <div className="flex gap-3">
-                <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-zinc-800 rounded-xl text-sm font-bold cursor-pointer hover:bg-slate-200 transition-colors">Cancel</button>
-                <button onClick={() => { deleteSale(deleteId); setDeleteId(null); }} className="flex-1 px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold cursor-pointer hover:bg-rose-700 transition-colors">Delete</button>
+                <button disabled={isDeleting} onClick={closeDeleteModal} className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-zinc-800 rounded-xl text-sm font-bold cursor-pointer hover:bg-slate-200 transition-colors disabled:cursor-not-allowed disabled:opacity-60">Cancel</button>
+                <button disabled={isDeleting} onClick={confirmDeleteSale} className="flex-1 px-4 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold cursor-pointer hover:bg-rose-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
+                  {isDeleting ? "Deleting..." : "Delete & Restore"}
+                </button>
               </div>
             </motion.div>
           </div>

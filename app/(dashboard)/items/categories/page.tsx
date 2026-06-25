@@ -23,22 +23,26 @@ const CARD_COLORS = [
 
 export default function CategoriesPage() {
   const { categories = [], products = [] } = useAppData();
+  const visibleCategories = React.useMemo(
+    () => categories.filter((category: any) => String(category?.name || "").trim()),
+    [categories],
+  );
 
   const categoryCards = React.useMemo<CategoryCard[]>(() => {
-    return categories
+    return visibleCategories
       .map((category: any, index: number) => ({
         id: category.id,
         name: category.name,
-        count: products.filter((product: any) => product.category === category.name).length,
+        count: products.filter((product: any) => product.categoryId === category.id).length,
         color: CARD_COLORS[index % CARD_COLORS.length],
       }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-  }, [categories, products]);
+  }, [visibleCategories, products]);
 
   const uncategorizedCount = React.useMemo(() => {
-    const categoryNames = new Set(categories.map((category: any) => category.name));
-    return products.filter((product: any) => !categoryNames.has(product.category)).length;
-  }, [categories, products]);
+    const categoryIds = new Set(visibleCategories.map((category: any) => category.id));
+    return products.filter((product: any) => !categoryIds.has(product.categoryId)).length;
+  }, [visibleCategories, products]);
 
   const totalCounted = categoryCards.reduce((sum, category) => sum + category.count, 0);
   const hasCategories = categoryCards.length > 0;

@@ -1,26 +1,54 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { 
-  Building2, 
   Search, 
-  Plus, 
-  ChevronLeft, 
-  ChevronRight,
   Package,
-  MapPin,
   RefreshCw,
-  MoreVertical
 } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
-
-const LOCATION_STOCK = [
-  { id: "1", item: "Apple iPhone 15 Pro", category: "Electronics", total: 45, breakdown: { "Main Store": 12, "Bole Shop": 25, "Megenagna": 8 }, price: 54000 },
-  { id: "2", item: "Samsung Galaxy S24", category: "Electronics", total: 8, breakdown: { "Main Store": 2, "Bole Shop": 5, "Megenagna": 1 }, price: 48000 },
-  { id: "3", item: "Sony WH-1000XM5", category: "Accessories", total: 10, breakdown: { "Main Store": 4, "Bole Shop": 6, "Megenagna": 0 }, price: 18500 },
-];
+import { formatCurrency } from "@/lib/utils";
+import { useAppData } from "@/lib/client/useAppData";
 
 export default function AllLocationStock() {
+  const { items = [], products = [], locations = [], refresh } = useAppData();
+  const [search, setSearch] = React.useState("");
+
+  const matrix = React.useMemo(() => {
+    const rows = new Map<string, any>();
+    products.forEach((product: any) => {
+      rows.set(product.id, {
+        id: product.id,
+        item: product.name,
+        code: product.code || "",
+        category: product.category || "",
+        unit: product.unitShortName || product.unit || "",
+        total: 0,
+        price: Number(product.price || 0),
+        breakdown: Object.fromEntries(locations.map((location: any) => [location.id, 0])),
+      });
+    });
+    items.forEach((stockItem: any) => {
+      const row = rows.get(stockItem.id) || {
+        id: stockItem.id,
+        item: stockItem.name,
+        code: stockItem.code || "",
+        category: stockItem.category || "",
+        unit: stockItem.unitShortName || stockItem.unit || "",
+        total: 0,
+        price: Number(stockItem.sellingPrice || stockItem.price || 0),
+        breakdown: Object.fromEntries(locations.map((location: any) => [location.id, 0])),
+      };
+      const stock = Number(stockItem.stock || 0);
+      row.breakdown[stockItem.locationId] = (row.breakdown[stockItem.locationId] || 0) + stock;
+      row.total += stock;
+      rows.set(stockItem.id, row);
+    });
+    const normalizedSearch = search.trim().toLowerCase();
+    return [...rows.values()]
+      .filter((row) => !normalizedSearch || `${row.item} ${row.code} ${row.category}`.toLowerCase().includes(normalizedSearch))
+      .sort((a, b) => a.item.localeCompare(b.item));
+  }, [items, products, locations, search]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 font-sans">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -28,7 +56,7 @@ export default function AllLocationStock() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Shop/Store Inventory Matrix</h1>
           <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1 opacity-70">Aggregated stock by location</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
+        <button onClick={refresh} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
            <RefreshCw className="w-4 h-4" />
            Refresh Matrix
         </button>
@@ -41,6 +69,8 @@ export default function AllLocationStock() {
               <input 
                 type="text" 
                 placeholder="Lookup product by name or SKU..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none focus:ring-1 focus:ring-indigo-500 font-medium font-sans placeholder:text-slate-300"
               />
            </div>
@@ -51,15 +81,21 @@ export default function AllLocationStock() {
             <thead>
               <tr className="bg-slate-50/50 dark:bg-zinc-950/30 text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] border-b border-slate-200 dark:border-zinc-800">
                 <th className="px-6 py-5">Global Product Catalog</th>
-                <th className="px-6 py-5 text-center">Main Store</th>
-                <th className="px-6 py-5 text-center">Bole Shop</th>
-                <th className="px-6 py-5 text-center">Megenagna</th>
+                {locations.map((location: any) => (
+                  <th key={location.id} className="px-6 py-5 text-center">{location.name}</th>
+                ))}
                 <th className="px-6 py-5 text-right">Total Aggregate</th>
                 <th className="px-6 py-5 text-right">Valuation</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 font-sans">
-              {LOCATION_STOCK.map((item) => (
+              {matrix.length === 0 ? (
+                <tr>
+                  <td colSpan={locations.length + 3} className="px-6 py-14 text-center text-sm font-bold text-slate-400">
+                    No stock records found.
+                  </td>
+                </tr>
+              ) : matrix.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/20 transition-colors group">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
@@ -72,18 +108,14 @@ export default function AllLocationStock() {
                        </div>
                     </div>
                   </td>
-                  <td className="px-6 py-5 text-center font-mono text-xs font-bold text-slate-500 dark:text-zinc-400">
-                    {item.breakdown["Main Store"]}
-                  </td>
-                  <td className="px-6 py-5 text-center font-mono text-xs font-bold text-slate-500 dark:text-zinc-400">
-                    {item.breakdown["Bole Shop"]}
-                  </td>
-                  <td className="px-6 py-5 text-center font-mono text-xs font-bold text-slate-500 dark:text-zinc-400">
-                    {item.breakdown["Megenagna"]}
-                  </td>
+                  {locations.map((location: any) => (
+                    <td key={location.id} className="px-6 py-5 text-center font-mono text-xs font-bold text-slate-500 dark:text-zinc-400">
+                      {item.breakdown[location.id] || 0}
+                    </td>
+                  ))}
                   <td className="px-6 py-5 text-right">
                     <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 rounded-full font-black text-sm tracking-tighter">
-                       {item.total} Units
+                       {item.total} {item.unit || "Units"}
                     </span>
                   </td>
                   <td className="px-6 py-5 text-right">

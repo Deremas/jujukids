@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { ChevronDown, Database, Package, Search, ShieldCheck, SlidersHorizontal, Warehouse, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ChevronDown, Database, Edit, Package, Search, ShieldCheck, SlidersHorizontal, Warehouse, X } from "lucide-react";
 import { useAppData } from "@/lib/client/useAppData";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -21,7 +22,7 @@ export function StockView({
 }) {
   const { data: session } = useSession();
   const user = session?.user as any;
-  const { items = [], locations = [], currentLocation, adjustStock } = useAppData();
+  const { items = [], locations = [], currentLocation, adjustStock, updateItemPrice } = useAppData();
   const [search, setSearch] = React.useState("");
   const [locationId, setLocationId] = React.useState("");
   const [category, setCategory] = React.useState("");
@@ -30,7 +31,11 @@ export function StockView({
   const [adjustQuantity, setAdjustQuantity] = React.useState("");
   const [adjustReason, setAdjustReason] = React.useState("");
   const [adjustError, setAdjustError] = React.useState("");
+  const [priceEditingItem, setPriceEditingItem] = React.useState<any>(null);
+  const [priceValue, setPriceValue] = React.useState("");
+  const [priceError, setPriceError] = React.useState("");
   const canAdjustStock = user?.role === "Super Admin";
+  const canEditPrice = user?.role === "Super Admin" || user?.permissions?.includes("inventory.items.update");
 
   const scopedLocations = locations.filter((location: any) => location.type === locationType);
 
@@ -84,6 +89,28 @@ export function StockView({
       setAdjustingItem(null);
     } catch (error) {
       setAdjustError(error instanceof Error ? error.message : "Stock adjustment failed.");
+    }
+  };
+
+  const openPriceEditor = (item: any) => {
+    setPriceEditingItem(item);
+    setPriceValue(String(Number(item.sellingPrice || item.price || 0)));
+    setPriceError("");
+  };
+
+  const submitPriceUpdate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!priceEditingItem) return;
+    setPriceError("");
+    try {
+      await updateItemPrice({
+        itemId: priceEditingItem.id,
+        locationId: priceEditingItem.locationId,
+        sellingPrice: Number(priceValue),
+      });
+      setPriceEditingItem(null);
+    } catch (error) {
+      setPriceError(error instanceof Error ? error.message : "Selling price update failed.");
     }
   };
 
@@ -154,7 +181,21 @@ export function StockView({
                     <td className="px-6 py-4 text-xs font-bold text-slate-500">{location?.name || "-"}</td>
                     <td className="px-6 py-4 text-xs font-bold text-slate-500">{item.category}</td>
                     <td className="px-6 py-4 text-right text-xs font-bold text-slate-900 dark:text-zinc-100">{formatCurrency(Number(item.buyingPrice || 0))}</td>
-                    <td className="px-6 py-4 text-right text-xs font-bold text-slate-900 dark:text-zinc-100">{formatCurrency(Number(item.sellingPrice || item.price || 0))}</td>
+                    <td className="px-6 py-4 text-right text-xs font-bold text-slate-900 dark:text-zinc-100">
+                      <div className="flex items-center justify-end gap-2">
+                        <span>{formatCurrency(Number(item.sellingPrice || item.price || 0))}</span>
+                        {canEditPrice && (
+                          <button
+                            type="button"
+                            onClick={() => openPriceEditor(item)}
+                            className="rounded-lg border border-slate-200 p-1.5 text-slate-400 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-800"
+                            title="Edit selling price"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-center text-xs font-black text-indigo-600 dark:text-indigo-400">{item.stock}</td>
                     <td className="px-6 py-4 text-right text-xs font-bold text-slate-900 dark:text-zinc-100">{formatCurrency(Number(item.stock || 0) * Number(item.price || 0))}</td>
                     <td className="px-6 py-4 text-center">
@@ -194,7 +235,8 @@ export function StockView({
       </div>
 
       {adjustingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[100] flex min-h-dvh items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
           <form onSubmit={submitAdjustment} className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
@@ -248,10 +290,69 @@ export function StockView({
               </button>
             </div>
           </form>
-        </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {priceEditingItem && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[100] flex min-h-dvh items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+            <form onSubmit={submitPriceUpdate} className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-black text-slate-950 dark:text-white">Edit Selling Price</h2>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    {priceEditingItem.name} at {locations.find((location: any) => location.id === priceEditingItem.locationId)?.name}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setPriceEditingItem(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">New Selling Price</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={priceValue}
+                  onChange={(event) => setPriceValue(event.target.value)}
+                  className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
+                  required
+                />
+              </label>
+              <p className="mt-2 text-[11px] font-semibold text-slate-500">
+                This updates the item default price and open stock batches for this location, so new sales use the new price.
+              </p>
+
+              {priceError && <p className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600 dark:bg-rose-950/30">{priceError}</p>}
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button type="button" onClick={() => setPriceEditingItem(null)} className="rounded-xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+                  Cancel
+                </button>
+                <button type="submit" className="rounded-xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-500/20">
+                  Save Price
+                </button>
+              </div>
+            </form>
+          </div>
+        </ModalPortal>
       )}
     </div>
   );
+}
+
+function ModalPortal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+  return createPortal(children, document.body);
 }
 
 function getStockStatus(item: any) {

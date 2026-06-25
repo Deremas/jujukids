@@ -25,7 +25,7 @@ export default function NewPurchasePage() {
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user as any;
-  const { items, suppliers, addSupplier, addItem, bankAccounts, addPurchase, locations, currentLocation } = useAppData();
+  const { items, categories = [], units = [], suppliers, addSupplier, addItem, bankAccounts, addPurchase, locations, currentLocation } = useAppData();
   const [purchaseDate, setPurchaseDate] = useState("");
   const [selectedSupplierId, setSelectedSupplierId] = useState(NO_SUPPLIER_ID);
   const [selectedLocationId, setSelectedLocationId] = useState(currentLocation?.id || "");
@@ -49,7 +49,7 @@ export default function NewPurchasePage() {
   const [newSupplier, setNewSupplier] = useState({ name: "", contact: "", phone: "" });
   
   // New Item state
-  const [newItem, setNewItem] = useState({ name: "", code: "", category: "", price: 0, unit: "" });
+  const [newItem, setNewItem] = useState({ name: "", code: "", categoryId: "", price: 0, unitId: "" });
   const [saving, setSaving] = useState(false);
 
   React.useEffect(() => {
@@ -90,7 +90,7 @@ export default function NewPurchasePage() {
             ...line, 
             itemId: value, 
             itemName: item?.name || "", 
-            unit: item?.unit || "",
+            unit: item?.unitShortName || item?.unit || "",
             sellingPrice: item?.price || 0 
           };
         }
@@ -112,7 +112,7 @@ export default function NewPurchasePage() {
   };
 
   const handleQuickAddItem = () => {
-    if (newItem.name && selectedLocationId) {
+    if (newItem.name && selectedLocationId && newItem.categoryId && newItem.unitId) {
       const id = Math.random().toString(36).substr(2, 9);
       const generatedCode = newItem.code || "ITEM-" + Math.random().toString(36).substr(2, 6).toUpperCase();
       const fullItem = { 
@@ -121,11 +121,13 @@ export default function NewPurchasePage() {
         stock: 0, 
         status: "Active", 
         code: generatedCode,
-        locationId: selectedLocationId
+        locationId: selectedLocationId,
+        categoryId: newItem.categoryId,
+        unitId: newItem.unitId,
       };
       addItem(fullItem);
       setShowItemModal(false);
-      setNewItem({ name: "", code: "", category: "", price: 0, unit: "" });
+      setNewItem({ name: "", code: "", categoryId: "", price: 0, unitId: "" });
     }
   };
 
@@ -639,14 +641,14 @@ export default function NewPurchasePage() {
                     <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Category</label>
                     <div className="relative">
                       <select 
-                        value={newItem.category}
-                        onChange={(e) => setNewItem({...newItem, category: e.target.value})}
+                        value={newItem.categoryId}
+                        onChange={(e) => setNewItem({...newItem, categoryId: e.target.value})}
                         className="w-full px-4 pr-10 py-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none appearance-none font-bold"
                       >
                         <option value="" disabled>Select Category</option>
-                        <option>Electronics</option>
-                        <option>Accessories</option>
-                        <option>Computers</option>
+                        {categories.map((category: any) => (
+                          <option key={category.id} value={category.id}>{category.name}</option>
+                        ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>
@@ -658,14 +660,13 @@ export default function NewPurchasePage() {
                     <div className="relative">
                       <select 
                         className="w-full px-4 pr-10 py-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none appearance-none font-bold"
-                        value={newItem.unit}
-                        onChange={(e) => setNewItem({...newItem, unit: e.target.value})}
+                        value={newItem.unitId}
+                        onChange={(e) => setNewItem({...newItem, unitId: e.target.value})}
                       >
                         <option value="" disabled>Select Unit</option>
-                        <option>Pcs</option>
-                        <option>Box</option>
-                        <option>Kg</option>
-                        <option>Ltr</option>
+                        {units.map((unit: any) => (
+                          <option key={unit.id} value={unit.id}>{(unit.shortName || unit.name).toUpperCase()}</option>
+                        ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>

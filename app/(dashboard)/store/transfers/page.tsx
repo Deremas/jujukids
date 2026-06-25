@@ -197,7 +197,7 @@ export default function TransfersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <span className="text-xs font-black text-slate-900 dark:text-white">{tr.quantity} {item?.unit}</span>
+                        <span className="text-xs font-black text-slate-900 dark:text-white">{tr.quantity} {item?.unitShortName || item?.unit}</span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className="inline-flex px-2 py-1 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[9px] font-black uppercase tracking-widest">

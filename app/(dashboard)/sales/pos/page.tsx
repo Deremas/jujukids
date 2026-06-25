@@ -95,7 +95,7 @@ export default function PosPage() {
       const liveStock = items.find(i => i.id === overStockItem.id && i.locationId === currentLocation.id)?.stock ?? 0;
       toast.error({
         title: "Not enough stock",
-        description: `${overStockItem.name} only has ${liveStock} ${overStockItem.unit} available.`,
+        description: `${overStockItem.name} only has ${liveStock} ${overStockItem.unitShortName || overStockItem.unit} available.`,
       });
       return;
     }
@@ -194,7 +194,7 @@ export default function PosPage() {
                     item.stock <= 0 && "bg-rose-50 text-rose-600 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-900/50",
                   )}
                 >
-                  {item.stock > 0 ? `${item.stock} ${item.unit}` : "Out"}
+                  {item.stock > 0 ? `${item.stock} ${item.unitShortName || item.unit}` : "Out"}
                 </span>
                 <div
                   className={cn(
@@ -284,7 +284,7 @@ export default function PosPage() {
                     <p className="shrink-0 text-[11px] font-black text-slate-700 dark:text-zinc-300">{formatCurrency(item.price)}</p>
                   </div>
                   <p className="mb-2 mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500">
-                    Max {Math.max(0, item.stock)} {item.unit}
+                    Max {Math.max(0, item.stock)} {item.unitShortName || item.unit}
                   </p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-md">
@@ -300,7 +300,7 @@ export default function PosPage() {
                         onClick={() => updateQuantity(item.id, 1)}
                         disabled={item.quantity >= item.stock}
                         className="p-1 text-slate-400 hover:text-slate-900 disabled:opacity-35 disabled:hover:text-slate-400 dark:hover:text-white"
-                        title={item.quantity >= item.stock ? `Only ${item.stock} ${item.unit} available` : "Increase quantity"}
+                        title={item.quantity >= item.stock ? `Only ${item.stock} ${item.unitShortName || item.unit} available` : "Increase quantity"}
                       >
                         <Plus className="w-3 h-3" />
                       </button>

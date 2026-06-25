@@ -11,6 +11,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CASH_ACCOUNT_TYPE = "CASH";
+const UNCATEGORIZED_CATEGORY_NAME = "Uncategorized";
+
+function isUncategorizedCategory(category?: { name?: string | null } | null) {
+  return (category?.name || "").trim().toLowerCase() === UNCATEGORIZED_CATEGORY_NAME.toLowerCase();
+}
+
+function categoryDisplayName(category?: { name?: string | null } | null) {
+  return isUncategorizedCategory(category) ? "-" : category?.name || "-";
+}
+
+function categoryDisplayId(categoryId: string, category?: { name?: string | null } | null) {
+  return isUncategorizedCategory(category) ? "" : categoryId;
+}
 
 function toAppUser(user: {
   id: string;
@@ -74,7 +87,10 @@ const ACTION_PERMISSIONS: Record<string, string> = {
   updateCustomer: "customers.update",
   addSupplier: "suppliers.create",
   updateSupplier: "suppliers.update",
+  addCategory: "inventory.items.create",
+  addUnit: "inventory.items.create",
   addItem: "inventory.items.create",
+  updateItemPrice: "inventory.items.update",
   addLocation: "admin.locations.create",
   updateSettings: "admin.settings.update",
   addUser: "admin.users.create",
@@ -236,11 +252,15 @@ export async function GET() {
     stockByItemLocation.set(key, {
       id: batch.itemId,
       name: batch.item.name,
-      category: batch.item.category.name,
+      categoryId: categoryDisplayId(batch.item.categoryId, batch.item.category),
+      category: categoryDisplayName(batch.item.category),
       price: batch.sellingPrice || batch.item.defaultSellingPrice,
       buyingPrice: batch.buyingPrice || batch.item.defaultBuyingPrice,
       sellingPrice: batch.sellingPrice || batch.item.defaultSellingPrice,
       stock: batch.remainingQuantity,
+      unitId: batch.item.unitId,
+      unitName: batch.item.unit.name,
+      unitShortName: batch.item.unit.shortName,
       unit: batch.item.unit.shortName,
       code: batch.item.code || "",
       status: batch.item.isActive ? "Active" : "Inactive",
@@ -413,12 +433,18 @@ export async function GET() {
   return NextResponse.json({
     currentLocation,
     locations: locations.map((location) => ({ id: location.id, name: location.name, type: location.type })),
-    categories: categories.map((category) => ({ id: category.id, name: category.name })),
+    categories: categories
+      .filter((category) => !isUncategorizedCategory(category))
+      .map((category) => ({ id: category.id, name: category.name })),
     units: units.map((unit) => ({ id: unit.id, name: unit.name, shortName: unit.shortName })),
     products: products.map((item) => ({
       id: item.id,
       name: item.name,
-      category: item.category.name,
+      categoryId: categoryDisplayId(item.categoryId, item.category),
+      category: categoryDisplayName(item.category),
+      unitId: item.unitId,
+      unitName: item.unit.name,
+      unitShortName: item.unit.shortName,
       unit: item.unit.shortName,
       code: item.code || "",
       barcode: item.barcode || "",
@@ -561,7 +587,11 @@ export async function GET() {
       locationId: movement.locationId,
       itemName: movement.item.name,
       itemCode: movement.item.code || "",
-      category: movement.item.category.name,
+      categoryId: categoryDisplayId(movement.item.categoryId, movement.item.category),
+      category: categoryDisplayName(movement.item.category),
+      unitId: movement.item.unitId,
+      unitName: movement.item.unit.name,
+      unitShortName: movement.item.unit.shortName,
       unit: movement.item.unit.shortName,
       locationName: movement.location.name,
       locationType: movement.location.type,
@@ -676,29 +706,43 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "addItem") {
-    const category = await prisma.category.upsert({
-      where: { id: payload.categoryId || `cat-${String(payload.category || "general").toLowerCase().replace(/[^a-z0-9]+/g, "-")}` },
-      update: {},
+    const categoryName = String(payload.category || "").trim();
+    const unitName = String(payload.unit || "").trim();
+    const category =
+      payload.categoryId
+        ? await prisma.category.findUnique({ where: { id: payload.categoryId } })
+        : categoryName
+          ? await prisma.category.findFirst({ where: { name: categoryName } })
+          : null;
+    const resolvedCategory = category || await prisma.category.upsert({
+      where: { id: categoryName ? `cat-${categoryName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : "cat-uncategorized" },
+      update: { name: categoryName || UNCATEGORIZED_CATEGORY_NAME },
       create: {
-        id: payload.categoryId || `cat-${String(payload.category || "general").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-        name: payload.category || "General",
+        id: categoryName ? `cat-${categoryName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : "cat-uncategorized",
+        name: categoryName || UNCATEGORIZED_CATEGORY_NAME,
       },
     });
-    const unit = await prisma.unit.upsert({
-      where: { id: payload.unitId || `unit-${String(payload.unit || "pcs").toLowerCase().replace(/[^a-z0-9]+/g, "-")}` },
-      update: {},
-      create: {
-        id: payload.unitId || `unit-${String(payload.unit || "pcs").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-        name: payload.unit || "Pieces",
-        shortName: payload.unit || "Pcs",
+    const unit =
+      payload.unitId
+        ? await prisma.unit.findUnique({ where: { id: payload.unitId } })
+        : unitName
+          ? await prisma.unit.findFirst({ where: { name: unitName } })
+          : null;
+    if (!unit && !unitName) {
+      return NextResponse.json({ ok: false, error: "Unit is required." }, { status: 400 });
+    }
+    const resolvedUnit = unit || await prisma.unit.create({
+      data: {
+        name: unitName,
+        shortName: unitName,
       },
     });
     const item = await prisma.item.create({
       data: {
         name: payload.name,
         code: payload.code || null,
-        categoryId: category.id,
-        unitId: unit.id,
+        categoryId: resolvedCategory.id,
+        unitId: resolvedUnit.id,
         defaultBuyingPrice: Number(payload.buyingPrice || payload.price || 0),
         defaultSellingPrice: Number(payload.price || payload.sellingPrice || 0),
         lowStockAlert: Number(payload.lowStockAlert || 10),
@@ -718,6 +762,42 @@ export async function POST(request: NextRequest) {
       });
     }
     return NextResponse.json({ ok: true, id: item.id });
+  }
+
+  if (action === "addCategory") {
+    const name = String(payload.name || "").trim();
+    if (!name) {
+      return NextResponse.json({ ok: false, error: "Category name is required." }, { status: 400 });
+    }
+    const existing = await prisma.category.findFirst({
+      where: { name: { equals: name, mode: "insensitive" } },
+    });
+    if (existing) {
+      return NextResponse.json({ ok: true, id: existing.id });
+    }
+    const category = await prisma.category.create({ data: { name } });
+    return NextResponse.json({ ok: true, id: category.id });
+  }
+
+  if (action === "addUnit") {
+    const name = String(payload.name || "").trim();
+    const shortName = String(payload.shortName || payload.name || "").trim();
+    if (!name) {
+      return NextResponse.json({ ok: false, error: "Unit name is required." }, { status: 400 });
+    }
+    const existing = await prisma.unit.findFirst({
+      where: { name: { equals: name, mode: "insensitive" } },
+    });
+    if (existing) {
+      return NextResponse.json({ ok: true, id: existing.id });
+    }
+    const unit = await prisma.unit.create({
+      data: {
+        name,
+        shortName: shortName.slice(0, 12) || name.slice(0, 3).toUpperCase(),
+      },
+    });
+    return NextResponse.json({ ok: true, id: unit.id });
   }
 
   if (action === "addLocation") {
@@ -1416,6 +1496,53 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, id: adjustment.id });
   }
 
+  if (action === "updateItemPrice") {
+    const price = Number(payload.sellingPrice);
+    if (!payload.itemId || !Number.isFinite(price) || price < 0) {
+      return NextResponse.json({ ok: false, error: "A valid item and non-negative selling price are required." }, { status: 400 });
+    }
+
+    const updatedOpenBatches = await prisma.$transaction(async (tx) => {
+      const item = await tx.item.findUniqueOrThrow({ where: { id: payload.itemId } });
+      const batchWhere = {
+        itemId: payload.itemId,
+        ...(payload.locationId ? { locationId: payload.locationId } : {}),
+        remainingQuantity: { gt: 0 },
+      };
+
+      await tx.item.update({
+        where: { id: payload.itemId },
+        data: { defaultSellingPrice: price },
+      });
+
+      const updatedBatches = await tx.inventoryBatch.updateMany({
+        where: batchWhere,
+        data: { sellingPrice: price },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: actorId,
+          locationId: payload.locationId || null,
+          action: "UPDATE",
+          module: "Inventory",
+          tableName: "Item",
+          recordId: item.id,
+          oldData: { defaultSellingPrice: item.defaultSellingPrice },
+          newData: {
+            defaultSellingPrice: price,
+            updatedOpenBatches: updatedBatches.count,
+            locationId: payload.locationId || null,
+          },
+        },
+      });
+
+      return updatedBatches.count;
+    });
+
+    return NextResponse.json({ ok: true, updatedOpenBatches });
+  }
+
   if (action === "deleteCustomer") {
     await prisma.customer.update({ where: { id: payload.id }, data: { isActive: false } });
     return NextResponse.json({ ok: true });
@@ -1426,7 +1553,98 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  if (action === "deleteSale" || action === "deletePurchase" || action === "deleteItem") {
+  if (action === "deleteSale") {
+    if (!payload.id) {
+      return NextResponse.json({ ok: false, error: "Sale id is required." }, { status: 400 });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUnique({
+        where: { id: payload.id },
+        include: {
+          items: true,
+          customerPayments: true,
+        },
+      });
+
+      if (!sale) {
+        throw new Error("Sale not found.");
+      }
+
+      const salePayments = await tx.bankTransaction.findMany({
+        where: { referenceNo: sale.id, type: "SALE_PAYMENT" },
+      });
+
+      for (const payment of salePayments) {
+        await tx.bankAccount.update({
+          where: { id: payment.bankAccountId },
+          data: { currentBalance: { decrement: payment.amount } },
+        });
+      }
+
+      for (const line of sale.items) {
+        await tx.inventoryBatch.update({
+          where: { id: line.inventoryBatchId },
+          data: { remainingQuantity: { increment: line.quantity } },
+        });
+      }
+
+      await tx.inventoryMovement.deleteMany({
+        where: {
+          referenceType: "SALE",
+          referenceId: sale.id,
+        },
+      });
+
+      await tx.bankTransaction.deleteMany({
+        where: { referenceNo: sale.id, type: "SALE_PAYMENT" },
+      });
+
+      await tx.customerPayment.updateMany({
+        where: { saleId: sale.id },
+        data: { saleId: null },
+      });
+
+      await tx.saleItem.deleteMany({ where: { saleId: sale.id } });
+      await tx.sale.delete({ where: { id: sale.id } });
+
+      await tx.auditLog.create({
+        data: {
+          userId: actorId,
+          locationId: sale.locationId,
+          action: "DELETE",
+          module: "Sales",
+          tableName: "Sale",
+          recordId: sale.id,
+          oldData: {
+            saleId: sale.id,
+            voucherCode: sale.voucherCode,
+            totalAmount: sale.totalAmount,
+            restoredItems: sale.items.map((line) => ({
+              itemId: line.itemId,
+              inventoryBatchId: line.inventoryBatchId,
+              quantity: line.quantity,
+            })),
+            removedBankTransactions: salePayments.map((payment) => ({
+              id: payment.id,
+              bankAccountId: payment.bankAccountId,
+              amount: payment.amount,
+            })),
+          },
+        },
+      });
+
+      return {
+        restoredQuantity: sale.items.reduce((sum, line) => sum + line.quantity, 0),
+        restoredLines: sale.items.length,
+        removedBankTransactions: salePayments.length,
+      };
+    });
+
+    return NextResponse.json({ ok: true, ...result });
+  }
+
+  if (action === "deletePurchase" || action === "deleteItem") {
     return NextResponse.json({ ok: false, error: "Deleting production records is blocked. Use void/archive workflows instead." }, { status: 400 });
   }
 

@@ -7,6 +7,8 @@ type AppData = Record<string, any>;
 const initialAppData: AppData = {
   currentLocation: null,
   locations: [],
+  categories: [],
+  units: [],
   products: [],
   items: [],
   suppliers: [],
@@ -38,6 +40,8 @@ type AppDataContextValue = AppData & {
   updateSupplier: (payload: any) => Promise<any>;
   addLocation: (payload: any) => Promise<any>;
   updateSettings: (payload: any) => Promise<any>;
+  addCategory: (payload: any) => Promise<any>;
+  addUnit: (payload: any) => Promise<any>;
   addSale: (payload: any) => Promise<any>;
   addExpense: (payload: any) => Promise<any>;
   addCashTransfer: (payload: any) => Promise<{ success: boolean; error?: string }>;
@@ -58,6 +62,7 @@ type AppDataContextValue = AppData & {
   addSupplierPayment: (payload: any) => Promise<any>;
   addTransfer: (payload: any) => Promise<any>;
   adjustStock: (payload: any) => Promise<any>;
+  updateItemPrice: (payload: any) => Promise<any>;
   deleteSale: (id: string) => Promise<any>;
   deletePurchase: (id: string) => Promise<any>;
   deleteItem: (id: string) => Promise<{ success: boolean }>;
@@ -137,6 +142,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     updateSupplier: (payload: any) => runAction("updateSupplier", payload),
     addLocation: (payload: any) => runAction("addLocation", payload),
     updateSettings: (payload: any) => runAction("updateSettings", payload),
+    addCategory: (payload: any) => runAction("addCategory", payload),
+    addUnit: (payload: any) => runAction("addUnit", payload),
     addSale: (payload: any) => runAction("addSale", payload),
     addExpense: (payload: any) => runAction("addExpense", payload),
     addCashTransfer: async (payload: any) => {
@@ -164,6 +171,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     addSupplierPayment: (payload: any) => runAction("addSupplierPayment", payload),
     addTransfer: (payload: any) => runAction("addTransfer", payload),
     adjustStock: (payload: any) => runAction("adjustStock", payload),
+    updateItemPrice: (payload: any) => runAction("updateItemPrice", payload),
     deleteSale: (id: string) => runAction("deleteSale", { id }),
     deletePurchase: (id: string) => runAction("deletePurchase", { id }),
     deleteItem: async (id: string) => {

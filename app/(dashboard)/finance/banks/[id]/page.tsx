@@ -8,15 +8,6 @@ import { buildLedgerTransactions } from "@/lib/finance-ledger";
 import { formatCurrency } from "@/lib/utils";
 import { useAppData } from "@/lib/client/useAppData";
 
-const OPENING_BALANCES: Record<string, number> = {
-  BA1: 1250000,
-  BA2: 45000,
-  "CASH-GLOBAL": 4200,
-  "bank-cbe-current": 1250000,
-  "bank-abyssinia-savings": 45000,
-  "cash-global": 4200,
-};
-
 export default function BankAccountDetailsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -66,7 +57,7 @@ export default function BankAccountDetailsPage() {
     if (tx.method === "BANK_IN") return current + tx.amount;
     if (tx.method === "CASH_OUT") return current - tx.amount;
     return current;
-  }, OPENING_BALANCES[account.id] ?? account.currentBalance);
+  }, account.currentBalance);
   const canDelete = account.accountType !== "CASH" && transactions.length === 0;
   const totalIn = transactions.filter((tx) => tx.type === "INCOME").reduce((sum, tx) => sum + tx.amount, 0);
   const totalOut = transactions.filter((tx) => tx.type === "EXPENSE").reduce((sum, tx) => sum + tx.amount, 0);

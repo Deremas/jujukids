@@ -9,28 +9,35 @@ import { cn } from "@/lib/utils";
 
 export default function CreateItemPage() {
   const router = useRouter();
-  const { addItem, currentLocation } = useAppData();
+  const { addItem, addCategory, addUnit, categories = [], units = [], currentLocation } = useAppData();
+  const visibleCategories = React.useMemo(
+    () => categories.filter((category: any) => String(category?.name || "").trim()),
+    [categories],
+  );
   const [formData, setFormData] = useState({
     name: "",
     code: "",
-    category: "",
+    categoryId: "",
     stock: 0,
-    unit: "",
+    unitId: "",
     status: "Active"
   });
-  const [categories, setCategories] = useState(["Electronics", "Accessories", "Computers", "Office Supplies", "Furniture"]);
-  const [units, setUnits] = useState(["Pcs", "Box", "Kg", "Ltr", "Mtr", "Set"]);
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newUnitName, setNewUnitName] = useState("");
+  const [newUnitShortName, setNewUnitShortName] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
   const handleSave = async () => {
     if (!formData.name) return;
+    if (!formData.unitId) {
+      setSaveError("Please select or create a base metric.");
+      return;
+    }
     setSaving(true);
     setSaveError("");
     try {
@@ -39,6 +46,8 @@ export default function CreateItemPage() {
         ...formData,
         code: generatedCode,
         price: 0,
+        categoryId: formData.categoryId,
+        unitId: formData.unitId,
         locationId: currentLocation?.id,
       });
       router.push("/items");
@@ -50,20 +59,33 @@ export default function CreateItemPage() {
   };
 
   const handleQuickAddCategory = () => {
-    if (newCategoryName && !categories.includes(newCategoryName)) {
-      setCategories([...categories, newCategoryName]);
-      setFormData({ ...formData, category: newCategoryName });
-      setShowCategoryModal(false);
-      setNewCategoryName("");
+    const name = newCategoryName.trim();
+    if (name) {
+      addCategory({ name })
+        .then((result: any) => {
+          if (result?.id) {
+            setFormData((current) => ({ ...current, categoryId: result.id }));
+          }
+          setShowCategoryModal(false);
+          setNewCategoryName("");
+        })
+        .catch(() => undefined);
     }
   };
 
   const handleQuickAddUnit = () => {
-    if (newUnitName && !units.includes(newUnitName)) {
-      setUnits([...units, newUnitName]);
-      setFormData({ ...formData, unit: newUnitName });
-      setShowUnitModal(false);
-      setNewUnitName("");
+    const name = newUnitName.trim();
+    if (name) {
+      addUnit({ name, shortName: newUnitShortName.trim() || name.slice(0, 3).toUpperCase() })
+        .then((result: any) => {
+          if (result?.id) {
+            setFormData((current) => ({ ...current, unitId: result.id }));
+          }
+          setShowUnitModal(false);
+          setNewUnitName("");
+          setNewUnitShortName("");
+        })
+        .catch(() => undefined);
     }
   };
 
@@ -127,13 +149,13 @@ export default function CreateItemPage() {
                 <div className="relative">
                   <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                   <select 
-                    value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    value={formData.categoryId}
+                    onChange={(e) => setFormData({...formData, categoryId: e.target.value})}
                     className="w-full pl-12 pr-10 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm appearance-none cursor-pointer font-black tracking-tight"
                   >
-                    <option value="" disabled>Select Category</option>
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat.toUpperCase()}</option>
+                    <option value="">No Category</option>
+                    {visibleCategories.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -154,13 +176,13 @@ export default function CreateItemPage() {
               <div className="relative">
                 <Layers className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                 <select 
-                  value={formData.unit}
-                  onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                  value={formData.unitId}
+                  onChange={(e) => setFormData({...formData, unitId: e.target.value})}
                   className="w-full pl-12 pr-10 py-4 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-sm appearance-none cursor-pointer font-black tracking-tight"
                 >
                   <option value="" disabled>Select Unit</option>
-                  {units.map(u => (
-                    <option key={u} value={u}>{u.toUpperCase()}</option>
+                  {units.map((u: any) => (
+                    <option key={u.id} value={u.id}>{(u.shortName || u.name).toUpperCase()}</option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -293,14 +315,24 @@ export default function CreateItemPage() {
                     autoFocus
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Short Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Pcs" 
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono uppercase"
+                    value={newUnitShortName}
+                    onChange={(e) => setNewUnitShortName(e.target.value)}
+                  />
+                </div>
               </div>
               <div className="p-6 bg-slate-50/50 dark:bg-zinc-950/50 flex gap-3">
                 <button 
-                  onClick={() => setShowUnitModal(false)}
-                  className="flex-1 py-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all"
-                >
-                  Discard
-                </button>
+                    onClick={() => setShowUnitModal(false)}
+                    className="flex-1 py-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-400 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all"
+                  >
+                    Discard
+                  </button>
                 <button 
                   onClick={handleQuickAddUnit}
                   className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-900/20 hover:bg-indigo-500 transition-all uppercase tracking-widest"

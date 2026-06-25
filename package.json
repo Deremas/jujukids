@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "db:clean-categories": "tsx scripts/clean-categories.ts",
     "postinstall": "prisma generate --schema=\"$INIT_CWD/prisma/schema.prisma\"",
     "lint": "tsc --noEmit"
   },

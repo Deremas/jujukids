@@ -8,13 +8,6 @@ import { buildLedgerTransactions } from "@/lib/finance-ledger";
 import { cn, formatCurrency } from "@/lib/utils";
 import { calculateLocationCashBalance, useAppData } from "@/lib/client/useAppData";
 
-const CASH_ACCOUNT_ID = "CASH-GLOBAL";
-const OPENING_BALANCES: Record<string, number> = {
-  BA1: 1250000,
-  BA2: 45000,
-  [CASH_ACCOUNT_ID]: 4200,
-};
-
 export default function FinancePage() {
   const state = useAppData();
   const ledger = buildLedgerTransactions(state);
@@ -22,7 +15,6 @@ export default function FinancePage() {
   const bankAccounts = state.bankAccounts.filter((account) => account.accountType === "BANK");
 
   const accountBalance = (accountId: string, fallbackBalance: number) => {
-    const openingBalance = OPENING_BALANCES[accountId] ?? fallbackBalance;
     return ledger.reduce((balance, tx) => {
       if (tx.accountId !== accountId) return balance;
       if (tx.type === "INCOME") return balance + tx.amount;
@@ -30,7 +22,7 @@ export default function FinancePage() {
       if (tx.method === "BANK_IN") return balance + tx.amount;
       if (tx.method === "CASH_OUT") return balance - tx.amount;
       return balance;
-    }, openingBalance);
+    }, fallbackBalance);
   };
 
   const cashLocations = state.locations.map((location) => ({

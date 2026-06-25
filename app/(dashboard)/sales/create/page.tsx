@@ -39,6 +39,8 @@ export default function NewSalePage() {
   const toast = useToast();
   const {
     items,
+    categories = [],
+    units = [],
     customers,
     addCustomer,
     addItem,
@@ -92,9 +94,9 @@ export default function NewSalePage() {
   const [newItem, setNewItem] = useState({
     name: "",
     code: "",
-    category: "",
+    categoryId: "",
     price: 0,
-    unit: "",
+    unitId: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -185,7 +187,7 @@ export default function NewSalePage() {
               ...line,
               itemId: value,
               itemName: item?.name || "",
-              unit: item?.unit || "",
+              unit: item?.unitShortName || item?.unit || "",
               qty:
                 availableStock > 0
                   ? Math.min(Math.max(1, line.qty), availableStock)
@@ -217,7 +219,7 @@ export default function NewSalePage() {
   };
 
   const handleQuickAddItem = () => {
-    if (newItem.name && selectedLocationId) {
+    if (newItem.name && selectedLocationId && newItem.categoryId && newItem.unitId) {
       const id = Math.random().toString(36).substr(2, 9);
       const generatedCode =
         newItem.code ||
@@ -229,10 +231,12 @@ export default function NewSalePage() {
         status: "Active",
         code: generatedCode,
         locationId: selectedLocationId,
+        categoryId: newItem.categoryId,
+        unitId: newItem.unitId,
       };
       addItem(fullItem);
       setShowItemModal(false);
-      setNewItem({ name: "", code: "", category: "", price: 0, unit: "" });
+      setNewItem({ name: "", code: "", categoryId: "", price: 0, unitId: "" });
     }
   };
 
@@ -970,18 +974,20 @@ export default function NewSalePage() {
                     </label>
                     <div className="relative">
                       <select
-                        value={newItem.category}
+                        value={newItem.categoryId}
                         onChange={(e) =>
-                          setNewItem({ ...newItem, category: e.target.value })
+                          setNewItem({ ...newItem, categoryId: e.target.value })
                         }
                         className="w-full px-4 pr-10 py-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none appearance-none font-bold"
                       >
                         <option value="" disabled>
                           Select Category
                         </option>
-                        <option>Electronics</option>
-                        <option>Accessories</option>
-                        <option>Computers</option>
+                        {categories.map((category: any) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>
@@ -995,18 +1001,19 @@ export default function NewSalePage() {
                     <div className="relative">
                       <select
                         className="w-full px-4 pr-10 py-3 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none appearance-none font-bold"
-                        value={newItem.unit}
+                        value={newItem.unitId}
                         onChange={(e) =>
-                          setNewItem({ ...newItem, unit: e.target.value })
+                          setNewItem({ ...newItem, unitId: e.target.value })
                         }
                       >
                         <option value="" disabled>
                           Select Unit
                         </option>
-                        <option>Pcs</option>
-                        <option>Box</option>
-                        <option>Kg</option>
-                        <option>Ltr</option>
+                        {units.map((unit: any) => (
+                          <option key={unit.id} value={unit.id}>
+                            {(unit.shortName || unit.name).toUpperCase()}
+                          </option>
+                        ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>

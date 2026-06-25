@@ -18,33 +18,9 @@ import {
   Truck,
   ArrowRightLeft,
 } from "lucide-react";
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useAppData } from "@/lib/client/useAppData";
 import { useSession } from "next-auth/react";
-
-const salesTrendData = [
-  { name: "Jun", sales: 400 },
-  { name: "Jul", sales: 800 },
-  { name: "Aug", sales: 600 },
-  { name: "Sep", sales: 900 },
-  { name: "Oct", sales: 1100 },
-  { name: "Nov", sales: 850 },
-  { name: "Dec", sales: 1300 },
-  { name: "Jan", sales: 1200 },
-  { name: "Feb", sales: 1500 },
-  { name: "Mar", sales: 1400 },
-  { name: "Apr", sales: 1700 },
-  { name: "May", sales: 1600 },
-];
 
 export default function Dashboard() {
   const { data: session } = useSession();
