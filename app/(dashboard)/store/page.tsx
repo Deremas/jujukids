@@ -2,7 +2,7 @@
 
 import React from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Database, Edit, Package, Search, ShieldCheck, SlidersHorizontal, Warehouse, X } from "lucide-react";
+import { ChevronDown, Database, Edit, Package, PlusCircle, Search, ShieldCheck, SlidersHorizontal, Warehouse, X } from "lucide-react";
 import { useAppData } from "@/lib/client/useAppData";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -22,7 +22,7 @@ export function StockView({
 }) {
   const { data: session } = useSession();
   const user = session?.user as any;
-  const { items = [], locations = [], currentLocation, adjustStock, updateItemPrice } = useAppData();
+  const { items = [], products = [], locations = [], currentLocation, adjustStock, addStockEntry, updateItemPrice } = useAppData();
   const [search, setSearch] = React.useState("");
   const [locationId, setLocationId] = React.useState("");
   const [category, setCategory] = React.useState("");
@@ -31,6 +31,9 @@ export function StockView({
   const [adjustQuantity, setAdjustQuantity] = React.useState("");
   const [adjustReason, setAdjustReason] = React.useState("");
   const [adjustError, setAdjustError] = React.useState("");
+  const [stockEntryItem, setStockEntryItem] = React.useState<any>(null);
+  const [stockEntry, setStockEntry] = React.useState({ quantity: "", buyingPrice: "", sellingPrice: "", note: "" });
+  const [stockEntryError, setStockEntryError] = React.useState("");
   const [priceEditingItem, setPriceEditingItem] = React.useState<any>(null);
   const [priceValue, setPriceValue] = React.useState("");
   const [priceError, setPriceError] = React.useState("");
@@ -48,11 +51,42 @@ export function StockView({
   }, [currentLocation, locationType]);
 
   const categories = React.useMemo<string[]>(
-    () => Array.from(new Set<string>(items.map((item: any) => String(item.category || "")).filter(Boolean))).sort(),
-    [items],
+    () => Array.from(new Set<string>(products.map((item: any) => String(item.category || "")).filter(Boolean))).sort(),
+    [products],
   );
 
-  const filteredStock = items.filter((item: any) => {
+  const stockRows = React.useMemo(() => {
+    const rows = new Map<string, any>();
+    items.forEach((item: any) => {
+      rows.set(`${item.id}:${item.locationId}`, item);
+    });
+
+    const targetLocations = locationId
+      ? scopedLocations.filter((location: any) => location.id === locationId)
+      : currentLocation?.type === locationType
+        ? scopedLocations.filter((location: any) => location.id === currentLocation.id)
+        : scopedLocations;
+
+    products.forEach((product: any) => {
+      targetLocations.forEach((location: any) => {
+        const key = `${product.id}:${location.id}`;
+        if (rows.has(key)) return;
+        rows.set(key, {
+          ...product,
+          locationId: location.id,
+          stock: 0,
+          buyingPrice: product.buyingPrice || 0,
+          sellingPrice: product.price || 0,
+          price: product.price || 0,
+          status: product.status || "Active",
+        });
+      });
+    });
+
+    return [...rows.values()];
+  }, [currentLocation?.id, currentLocation?.type, items, locationId, locationType, products, scopedLocations]);
+
+  const filteredStock = stockRows.filter((item: any) => {
     const location = locations.find((entry: any) => entry.id === item.locationId);
     const q = search.trim().toLowerCase();
     const stockStatus = getStockStatus(item);
@@ -89,6 +123,36 @@ export function StockView({
       setAdjustingItem(null);
     } catch (error) {
       setAdjustError(error instanceof Error ? error.message : "Stock adjustment failed.");
+    }
+  };
+
+  const openStockEntry = (item: any) => {
+    setStockEntryItem(item);
+    setStockEntry({
+      quantity: "",
+      buyingPrice: String(Number(item.buyingPrice || 0)),
+      sellingPrice: String(Number(item.sellingPrice || item.price || 0)),
+      note: "Opening stock entry",
+    });
+    setStockEntryError("");
+  };
+
+  const submitStockEntry = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!stockEntryItem) return;
+    setStockEntryError("");
+    try {
+      await addStockEntry({
+        itemId: stockEntryItem.id,
+        locationId: stockEntryItem.locationId,
+        quantity: Number(stockEntry.quantity),
+        buyingPrice: Number(stockEntry.buyingPrice),
+        sellingPrice: Number(stockEntry.sellingPrice),
+        note: stockEntry.note,
+      });
+      setStockEntryItem(null);
+    } catch (error) {
+      setStockEntryError(error instanceof Error ? error.message : "Stock entry failed.");
     }
   };
 
@@ -209,14 +273,24 @@ export function StockView({
                     </td>
                     {canAdjustStock && (
                       <td className="px-6 py-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => openAdjustment(item)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-800"
-                        >
-                          <SlidersHorizontal className="h-3.5 w-3.5" />
-                          Adjust
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openStockEntry(item)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-zinc-800"
+                          >
+                            <PlusCircle className="h-3.5 w-3.5" />
+                            Add Stock
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openAdjustment(item)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-800"
+                          >
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            Adjust
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -290,6 +364,86 @@ export function StockView({
               </button>
             </div>
           </form>
+          </div>
+        </ModalPortal>
+      )}
+
+      {stockEntryItem && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[100] flex min-h-dvh items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+            <form onSubmit={submitStockEntry} className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-black text-slate-950 dark:text-white">Add Stock Entry</h2>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    {stockEntryItem.name} at {locations.find((location: any) => location.id === stockEntryItem.locationId)?.name}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setStockEntryItem(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Qty</span>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={stockEntry.quantity}
+                    onChange={(event) => setStockEntry((current) => ({ ...current, quantity: event.target.value }))}
+                    className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Buying Price</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={stockEntry.buyingPrice}
+                    onChange={(event) => setStockEntry((current) => ({ ...current, buyingPrice: event.target.value }))}
+                    className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Selling Price</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={stockEntry.sellingPrice}
+                    onChange={(event) => setStockEntry((current) => ({ ...current, sellingPrice: event.target.value }))}
+                    className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
+                    required
+                  />
+                </label>
+              </div>
+
+              <label className="mt-4 block">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Note</span>
+                <textarea
+                  value={stockEntry.note}
+                  onChange={(event) => setStockEntry((current) => ({ ...current, note: event.target.value }))}
+                  className="min-h-24 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
+                  placeholder="Example: Initial stock count"
+                />
+              </label>
+
+              {stockEntryError && <p className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600 dark:bg-rose-950/30">{stockEntryError}</p>}
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button type="button" onClick={() => setStockEntryItem(null)} className="rounded-xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+                  Cancel
+                </button>
+                <button type="submit" className="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-500/20">
+                  Save Stock
+                </button>
+              </div>
+            </form>
           </div>
         </ModalPortal>
       )}

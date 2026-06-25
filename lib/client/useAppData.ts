@@ -62,6 +62,7 @@ type AppDataContextValue = AppData & {
   addSupplierPayment: (payload: any) => Promise<any>;
   addTransfer: (payload: any) => Promise<any>;
   adjustStock: (payload: any) => Promise<any>;
+  addStockEntry: (payload: any) => Promise<any>;
   updateItemPrice: (payload: any) => Promise<any>;
   deleteSale: (id: string) => Promise<any>;
   deletePurchase: (id: string) => Promise<any>;
@@ -171,6 +172,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     addSupplierPayment: (payload: any) => runAction("addSupplierPayment", payload),
     addTransfer: (payload: any) => runAction("addTransfer", payload),
     adjustStock: (payload: any) => runAction("adjustStock", payload),
+    addStockEntry: (payload: any) => runAction("addStockEntry", payload),
     updateItemPrice: (payload: any) => runAction("updateItemPrice", payload),
     deleteSale: (id: string) => runAction("deleteSale", { id }),
     deletePurchase: (id: string) => runAction("deletePurchase", { id }),

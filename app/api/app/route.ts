@@ -112,6 +112,7 @@ const ACTION_PERMISSIONS: Record<string, string> = {
   addSupplierPayment: "suppliers.payments.create",
   addTransfer: "inventory.transfers.create",
   adjustStock: "inventory.stock.adjust",
+  addStockEntry: "inventory.stock.adjust",
   deleteSale: "sales.delete",
   deletePurchase: "purchases.delete",
   deleteItem: "inventory.items.delete",
@@ -1494,6 +1495,71 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ ok: true, id: adjustment.id });
+  }
+
+  if (action === "addStockEntry") {
+    const quantity = Number(payload.quantity);
+    const buyingPrice = Number(payload.buyingPrice || 0);
+    const sellingPrice = Number(payload.sellingPrice || 0);
+    const note = String(payload.note || "Opening stock entry").trim();
+
+    if (!payload.itemId || !payload.locationId || !Number.isFinite(quantity) || quantity <= 0) {
+      return NextResponse.json({ ok: false, error: "A valid item, location, and positive quantity are required." }, { status: 400 });
+    }
+    if (!Number.isFinite(buyingPrice) || buyingPrice < 0 || !Number.isFinite(sellingPrice) || sellingPrice < 0) {
+      return NextResponse.json({ ok: false, error: "Buying and selling prices must be non-negative numbers." }, { status: 400 });
+    }
+
+    const stockEntry = await prisma.$transaction(async (tx) => {
+      const item = await tx.item.findUniqueOrThrow({ where: { id: payload.itemId } });
+      await tx.location.findUniqueOrThrow({ where: { id: payload.locationId } });
+
+      const before = await tx.inventoryBatch.aggregate({
+        where: { itemId: payload.itemId, locationId: payload.locationId },
+        _sum: { remainingQuantity: true },
+      });
+      const beforeQuantity = before._sum.remainingQuantity || 0;
+
+      const batch = await tx.inventoryBatch.create({
+        data: {
+          itemId: payload.itemId,
+          locationId: payload.locationId,
+          quantityIn: quantity,
+          remainingQuantity: quantity,
+          buyingPrice,
+          sellingPrice,
+          batchCode: payload.batchCode || `OPEN-${Date.now()}`,
+        },
+      });
+
+      await tx.item.update({
+        where: { id: item.id },
+        data: {
+          defaultBuyingPrice: buyingPrice,
+          defaultSellingPrice: sellingPrice,
+        },
+      });
+
+      const movement = await tx.inventoryMovement.create({
+        data: {
+          itemId: payload.itemId,
+          locationId: payload.locationId,
+          inventoryBatchId: batch.id,
+          type: "OPENING_STOCK",
+          quantity,
+          beforeQuantity,
+          afterQuantity: beforeQuantity + quantity,
+          referenceType: "OPENING_STOCK",
+          referenceId: batch.id,
+          note,
+          createdById: actorId,
+        },
+      });
+
+      return { batchId: batch.id, movementId: movement.id };
+    });
+
+    return NextResponse.json({ ok: true, ...stockEntry });
   }
 
   if (action === "updateItemPrice") {
