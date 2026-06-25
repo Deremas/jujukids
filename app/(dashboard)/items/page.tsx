@@ -161,7 +161,9 @@ export default function ItemList() {
               <AlertTriangle className="mt-0.5 h-5 w-5 text-rose-600" />
               <div>
                 <h3 className="text-lg font-black text-slate-950 dark:text-white">Confirm Deletion</h3>
-                <p className="mt-1 text-sm font-semibold text-slate-500">Only unused items can be deleted. Production records remain protected.</p>
+                <p className="mt-1 text-sm font-semibold text-slate-500">
+                  This permanently removes only unused zero-stock items. Items with stock or transaction history stay protected.
+                </p>
               </div>
             </div>
             <div className="mt-5 flex gap-2">

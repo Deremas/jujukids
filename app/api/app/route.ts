@@ -1644,8 +1644,58 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, ...result });
   }
 
-  if (action === "deletePurchase" || action === "deleteItem") {
+  if (action === "deletePurchase") {
     return NextResponse.json({ ok: false, error: "Deleting production records is blocked. Use void/archive workflows instead." }, { status: 400 });
+  }
+
+  if (action === "deleteItem") {
+    if (!payload.id) {
+      return NextResponse.json({ ok: false, error: "Item id is required." }, { status: 400 });
+    }
+
+    const item = await prisma.item.findUnique({ where: { id: payload.id } });
+    if (!item) {
+      return NextResponse.json({ ok: false, error: "Item not found." }, { status: 404 });
+    }
+
+    const [batches, movements, purchaseItems, saleItems, transferItems] = await Promise.all([
+      prisma.inventoryBatch.count({ where: { itemId: payload.id } }),
+      prisma.inventoryMovement.count({ where: { itemId: payload.id } }),
+      prisma.purchaseItem.count({ where: { itemId: payload.id } }),
+      prisma.saleItem.count({ where: { itemId: payload.id } }),
+      prisma.transferItem.count({ where: { itemId: payload.id } }),
+    ]);
+    const usageCount = batches + movements + purchaseItems + saleItems + transferItems;
+
+    if (usageCount > 0) {
+      return NextResponse.json(
+        { ok: false, error: "This item has stock or transaction history, so it cannot be deleted. Only unused zero-stock items can be deleted." },
+        { status: 400 },
+      );
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.auditLog.create({
+        data: {
+          userId: actorId,
+          action: "DELETE",
+          module: "Inventory",
+          tableName: "Item",
+          recordId: item.id,
+          oldData: {
+            id: item.id,
+            name: item.name,
+            code: item.code,
+            categoryId: item.categoryId,
+            unitId: item.unitId,
+            defaultSellingPrice: item.defaultSellingPrice,
+          },
+        },
+      });
+      await tx.item.delete({ where: { id: item.id } });
+    });
+
+    return NextResponse.json({ ok: true });
   }
 
   if (action === "updateUserStatus") {
