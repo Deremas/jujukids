@@ -12,7 +12,7 @@ import { signOut, useSession } from "next-auth/react";
 export function Topbar({ toggleSidebar }: { toggleSidebar: () => void }) {
   const { data: session } = useSession();
   const user = session?.user as any;
-  const { currentLocation, locations, setCurrentLocation } = useAppData();
+  const { currentLocation, locations, setCurrentLocation, bankAccounts } = useAppData();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -21,7 +21,7 @@ export function Topbar({ toggleSidebar }: { toggleSidebar: () => void }) {
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
-  const pageTitle = getPageTitle(pathname);
+  const pageTitle = getPageTitle(pathname, bankAccounts);
 
   const availableLocations = user?.role === 'Super Admin' 
     ? locations 
@@ -210,7 +210,7 @@ export function Topbar({ toggleSidebar }: { toggleSidebar: () => void }) {
   );
 }
 
-function getPageTitle(pathname: string) {
+function getPageTitle(pathname: string, bankAccounts: Array<{ id: string; displayName?: string }> = []) {
   const titles: Record<string, string> = {
     "/dashboard": "Dashboard",
     "/items": "Item List",
@@ -238,6 +238,11 @@ function getPageTitle(pathname: string) {
 
   if (titles[pathname]) {
     return titles[pathname];
+  }
+
+  const bankDetailMatch = pathname.match(/^\/finance\/banks\/([^/]+)$/);
+  if (bankDetailMatch) {
+    return bankAccounts.find((account) => account.id === bankDetailMatch[1])?.displayName || "Bank Account";
   }
 
   const segment = pathname.split("/").filter(Boolean).at(-1);

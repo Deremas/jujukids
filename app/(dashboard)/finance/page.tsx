@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { ArrowDownLeft, ArrowRightLeft, ArrowUpRight, Landmark, Wallet } from "lucide-react";
 
-import { buildLedgerTransactions } from "@/lib/finance-ledger";
+import { buildLedgerTransactions, movementSummary } from "@/lib/finance-ledger";
 import { cn, formatCurrency } from "@/lib/utils";
 import { calculateLocationCashBalance, useAppData } from "@/lib/client/useAppData";
 
@@ -14,16 +14,8 @@ export default function FinancePage() {
   const cashAccount = state.bankAccounts.find((account) => account.accountType === "CASH");
   const bankAccounts = state.bankAccounts.filter((account) => account.accountType === "BANK");
 
-  const accountBalance = (accountId: string, fallbackBalance: number) => {
-    return ledger.reduce((balance, tx) => {
-      if (tx.accountId !== accountId) return balance;
-      if (tx.type === "INCOME") return balance + tx.amount;
-      if (tx.type === "EXPENSE") return balance - tx.amount;
-      if (tx.method === "BANK_IN") return balance + tx.amount;
-      if (tx.method === "CASH_OUT") return balance - tx.amount;
-      return balance;
-    }, fallbackBalance);
-  };
+  const accountBalance = (accountId: string, fallbackBalance: number) =>
+    movementSummary(ledger.filter((tx) => tx.accountId === accountId), fallbackBalance).availableBalance;
 
   const cashLocations = state.locations.map((location) => ({
     ...location,
@@ -32,8 +24,9 @@ export default function FinancePage() {
   const locationCashTotal = cashLocations.reduce((sum, location) => sum + location.balance, 0);
   const cashBalance = cashAccount ? accountBalance(cashAccount.id, cashAccount.currentBalance) : locationCashTotal;
   const bankTotal = bankAccounts.reduce((sum, account) => sum + accountBalance(account.id, account.currentBalance), 0);
-  const inflow = ledger.filter((tx) => tx.type === "INCOME" || tx.method === "BANK_IN").reduce((sum, tx) => sum + tx.amount, 0);
-  const outflow = ledger.filter((tx) => tx.type === "EXPENSE" || tx.method === "CASH_OUT").reduce((sum, tx) => sum + tx.amount, 0);
+  const totals = movementSummary(ledger, 0);
+  const inflow = totals.totalInflow;
+  const outflow = totals.totalOutflow;
 
   return (
     <div className="space-y-6 pb-20 font-sans animate-in fade-in duration-500">

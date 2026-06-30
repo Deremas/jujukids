@@ -3,7 +3,7 @@
 import React from "react";
 import { ArrowUpRight, CreditCard, Edit3, Landmark, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { buildLedgerTransactions } from "@/lib/finance-ledger";
+import { buildLedgerTransactions, movementSummary } from "@/lib/finance-ledger";
 import { formatCurrency } from "@/lib/utils";
 import { calculateLocationCashBalance, useAppData } from "@/lib/client/useAppData";
 
@@ -19,17 +19,9 @@ export default function BankAccountsPage() {
     openingBalance: "0",
   });
 
-  const balanceFor = (accountId: string, fallbackBalance: number) => {
-    return ledger.reduce((balance, tx) => {
-      if (tx.accountId !== accountId) return balance;
-      if (tx.type === "INCOME") return balance + tx.amount;
-      if (tx.type === "EXPENSE") return balance - tx.amount;
-      if (tx.method === "BANK_IN") return balance + tx.amount;
-      if (tx.method === "CASH_OUT") return balance - tx.amount;
-      return balance;
-    }, fallbackBalance);
-  };
   const transactionsFor = (accountId: string) => ledger.filter((tx) => tx.accountId === accountId);
+  const balanceFor = (accountId: string, fallbackBalance: number) =>
+    movementSummary(transactionsFor(accountId), fallbackBalance).availableBalance;
   const selectedAccount = selectedAccountId
     ? state.bankAccounts.find((account) => account.id === selectedAccountId) || null
     : null;

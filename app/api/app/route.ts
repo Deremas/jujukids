@@ -176,7 +176,7 @@ export async function GET() {
     prisma.supplier.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.sale.findMany({
       where: locationScope ? { locationId: locationScope } : {},
-      include: { items: true, customer: true, location: true },
+      include: { items: { include: { item: true, inventoryBatch: true } }, customer: true, location: true },
       orderBy: { saleDate: "desc" },
     }),
     prisma.purchase.findMany({
@@ -494,10 +494,13 @@ export async function GET() {
       items: sale.items.map((line) => ({
         id: line.id,
         itemId: line.itemId,
+        itemName: line.item.name,
         qty: line.quantity,
         price: line.sellingPrice,
+        buyingPrice: line.inventoryBatch.buyingPrice,
         discount: line.discount,
         total: line.totalAmount,
+        profit: line.totalAmount - (line.inventoryBatch.buyingPrice * line.quantity),
       })),
     })),
     purchases: purchases.map((purchase) => {

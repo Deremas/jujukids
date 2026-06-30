@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Calendar, Edit3, Landmark, MapPin, ReceiptText, Trash2, X } from "lucide-react";
-import { buildLedgerTransactions } from "@/lib/finance-ledger";
+import { buildLedgerTransactions, movementSummary } from "@/lib/finance-ledger";
 import { formatCurrency } from "@/lib/utils";
 import { useAppData } from "@/lib/client/useAppData";
 
@@ -15,6 +15,7 @@ export default function BankAccountDetailsPage() {
   const account = state.bankAccounts.find((entry) => entry.id === params.id);
   const ledger = buildLedgerTransactions(state);
   const transactions = account ? ledger.filter((tx) => tx.accountId === account.id) : [];
+  const [page, setPage] = React.useState(1);
   const [editing, setEditing] = React.useState(false);
   const [formData, setFormData] = React.useState({
     displayName: account?.displayName || "",
@@ -51,16 +52,17 @@ export default function BankAccountDetailsPage() {
     );
   }
 
-  const balance = transactions.reduce((current, tx) => {
-    if (tx.type === "INCOME") return current + tx.amount;
-    if (tx.type === "EXPENSE") return current - tx.amount;
-    if (tx.method === "BANK_IN") return current + tx.amount;
-    if (tx.method === "CASH_OUT") return current - tx.amount;
-    return current;
-  }, account.currentBalance);
   const canDelete = account.accountType !== "CASH" && transactions.length === 0;
-  const totalIn = transactions.filter((tx) => tx.type === "INCOME").reduce((sum, tx) => sum + tx.amount, 0);
-  const totalOut = transactions.filter((tx) => tx.type === "EXPENSE").reduce((sum, tx) => sum + tx.amount, 0);
+  const summary = movementSummary(transactions, account.currentBalance);
+  const openingBalance = summary.openingBalance;
+  const inflow = summary.totalInflow;
+  const outflow = summary.totalOutflow;
+  const netMovement = summary.netMovement;
+  const balance = summary.availableBalance;
+  const pageSize = 8;
+  const totalPages = Math.max(1, Math.ceil(transactions.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedTransactions = transactions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const saveAccount = () => {
     const displayName = formData.displayName.trim();
@@ -154,9 +156,11 @@ export default function BankAccountDetailsPage() {
           <h2 className="text-lg font-black text-slate-950 dark:text-white">Movement Summary</h2>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current account totals</p>
           <div className="mt-5 space-y-3">
-            <InfoRow label="Total Inflow" value={formatCurrency(totalIn)} />
-            <InfoRow label="Total Outflow" value={formatCurrency(totalOut)} />
-            <InfoRow label="Net Movement" value={formatCurrency(totalIn - totalOut)} />
+            <InfoRow label="Opening Balance" value={formatCurrency(openingBalance)} />
+            <InfoRow label="Total Inflow" value={formatCurrency(inflow)} />
+            <InfoRow label="Total Outflow" value={formatCurrency(outflow)} />
+            <InfoRow label="Net Movement" value={formatCurrency(netMovement)} />
+            <InfoRow label="Available Balance" value={formatCurrency(balance)} />
           </div>
         </div>
 
@@ -168,7 +172,7 @@ export default function BankAccountDetailsPage() {
           <div className="divide-y divide-slate-100 dark:divide-zinc-800">
             {transactions.length === 0 ? (
               <p className="p-8 text-center text-xs font-black uppercase tracking-widest text-slate-300">No activity yet</p>
-            ) : transactions.map((tx) => (
+            ) : pagedTransactions.map((tx) => (
               <div key={tx.id} className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-center">
                 <div className="min-w-0 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
@@ -192,6 +196,15 @@ export default function BankAccountDetailsPage() {
               </div>
             ))}
           </div>
+          {transactions.length > pageSize ? (
+            <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+              <span>Page {currentPage} of {totalPages}</span>
+              <div className="flex gap-2">
+                <button type="button" disabled={currentPage <= 1} onClick={() => setPage((value) => value - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
+                <button type="button" disabled={currentPage >= totalPages} onClick={() => setPage((value) => value + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 

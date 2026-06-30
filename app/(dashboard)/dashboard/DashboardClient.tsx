@@ -21,6 +21,7 @@ import {
 import { cn, formatCurrency } from "@/lib/utils";
 import { useAppData } from "@/lib/client/useAppData";
 import { useSession } from "next-auth/react";
+import { saleProfit } from "@/lib/sales-utils";
 
 export default function Dashboard() {
   const { data: session } = useSession();
@@ -55,6 +56,7 @@ export default function Dashboard() {
 
   const todaySales = locationSales.filter((s) => new Date(s.saleDate) >= today);
   const totalTodaySales = todaySales.reduce((acc, s) => acc + s.totalAmount, 0);
+  const totalTodayProfit = todaySales.reduce((acc, s) => acc + saleProfit(s), 0);
 
   const inventoryValue = locationItems.reduce(
     (acc, i) => acc + i.price * i.stock,
@@ -168,6 +170,7 @@ export default function Dashboard() {
             subtitle="AVG SALE"
             icon={ShoppingCart}
             action="VIEW SALES"
+            actionHref="/sales"
             avg={
               todaySales.length
                 ? formatCurrency(totalTodaySales / todaySales.length)
@@ -177,14 +180,19 @@ export default function Dashboard() {
         )}
         {can("reports.view") && can("sales.view") && (
           <SmallStatCard
-            title="TODAY'S PROFIT (EST)"
-            value={formatCurrency(totalTodaySales * 0.25)}
-            change="25% margin"
-            subtitle="ESTIMATED MARGIN"
+            title="TODAY'S PROFIT"
+            value={formatCurrency(totalTodayProfit)}
+            change={`${todaySales.length} txns`}
+            subtitle="AVG PROFIT"
             icon={TrendingUp}
             action="VIEW ANALYSIS"
+            actionHref="/reports/sales"
             trend="up"
-            avg="25%"
+            avg={
+              todaySales.length
+                ? formatCurrency(totalTodayProfit / todaySales.length)
+                : formatCurrency(0)
+            }
           />
         )}
         {(can("inventory.stock.view") || can("inventory.items.view")) && (
@@ -195,6 +203,7 @@ export default function Dashboard() {
             subtitle="IN STOCK"
             icon={Package}
             action="VIEW PRODUCTS"
+            actionHref="/items"
             avg={locationItems.reduce((acc, i) => acc + i.stock, 0).toString()}
           />
         )}
@@ -209,12 +218,13 @@ export default function Dashboard() {
             icon={TrendingUp}
             color="amber"
             action="VIEW STOCK"
+            actionHref="/store/locations"
           />
         )}
         {can("inventory.stock.view") && (
           <DashboardCard
-            title="ESTIMATED SALES VALUE"
-            value={formatCurrency(inventoryValue * 1.3)}
+            title="SALES VALUE"
+            value={formatCurrency(inventoryValue)}
             color="indigo"
           />
         )}
@@ -226,6 +236,7 @@ export default function Dashboard() {
             icon={AlertTriangle}
             color={lowStockItems > 0 ? "amber" : "indigo"}
             action="REPLENISH"
+            actionHref="/items/low-stock"
           />
         )}
         <div className="hidden lg:block" />
@@ -241,6 +252,7 @@ export default function Dashboard() {
             icon={Users}
             color="indigo"
             action="VIEW CRM"
+            actionHref="/customers"
           />
         )}
         {can("suppliers.view") && (
@@ -250,6 +262,7 @@ export default function Dashboard() {
             icon={Package}
             color="indigo"
             action="VIEW SUPPLIERS"
+            actionHref="/suppliers"
           />
         )}
         {can("customers.view") && (
@@ -260,6 +273,7 @@ export default function Dashboard() {
             icon={TrendingUp}
             color="amber"
             action="VIEW CREDITS"
+            actionHref="/customers/credits"
             trend="up"
           />
         )}
@@ -271,6 +285,7 @@ export default function Dashboard() {
             icon={Bell}
             color="indigo"
             action="REVIEW LOGS"
+            actionHref="/reports/audit"
           />
         )}
       </div>
@@ -431,6 +446,7 @@ function SmallStatCard({
   subtitle,
   icon: Icon,
   action,
+  actionHref,
   trend,
   avg,
 }: any) {
@@ -469,7 +485,7 @@ function SmallStatCard({
 
       <div className="mt-6">
         <Link
-          href="#"
+          href={actionHref || "#"}
           className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase flex items-center gap-2 group/btn tracking-widest"
         >
           {action}{" "}
@@ -487,6 +503,7 @@ function DashboardCard({
   icon: Icon,
   color,
   action,
+  actionHref,
   trend,
 }: any) {
   return (
@@ -531,7 +548,7 @@ function DashboardCard({
       {action && (
         <div className="mt-6 border-t border-slate-50 dark:border-zinc-800 pt-4">
           <Link
-            href="#"
+            href={actionHref || "#"}
             className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase flex items-center gap-2 group tracking-widest"
           >
             {action}{" "}

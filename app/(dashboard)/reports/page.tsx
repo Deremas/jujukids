@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -27,6 +28,7 @@ import {
 import { buildLedgerTransactions } from "@/lib/finance-ledger";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useAppData } from "@/lib/client/useAppData";
+import { paginateRows, saleItemSummary, saleProfit } from "@/lib/sales-utils";
 
 const categories = ["All", "Sales", "Inventory", "Procurement", "Finance", "Administrative"] as const;
 
@@ -46,11 +48,11 @@ type ReportDefinition = {
 const reports: ReportDefinition[] = [
   { id: "sales-list", title: "Sales List", category: "Sales", description: "Completed, draft, and voided sales with payment and customer visibility.", icon: ShoppingCart, filters: ["Locations", "Date Range", "Customers", "Payment Method", "Status"], output: "Transaction list", route: "/sales" },
   { id: "sold-items", title: "Sold Items", category: "Sales", description: "Item-level sales breakdown by quantity, revenue, and location.", icon: ReceiptText, filters: ["Locations", "Date Range", "Items", "Categories", "Customers"], output: "Item sales table" },
-  { id: "sales-profitability", title: "Sales Profitability", category: "Sales", description: "Sales value, estimated cost, gross profit, and margin by product or location.", icon: TrendingUp, filters: ["Locations", "Date Range", "Items", "Categories"], output: "Margin summary" },
+  { id: "sales-profitability", title: "Sales Profitability", category: "Sales", description: "Sales value, cost of goods, and gross profit by product or location.", icon: TrendingUp, filters: ["Locations", "Date Range", "Items", "Categories"], output: "Profit summary" },
   { id: "customer-credit-aging", title: "Customer Credit & Aging", category: "Sales", description: "Receivables, outstanding balances, and aging buckets.", icon: UserRound, filters: ["Locations", "Customers", "Aging Bucket", "Date Range"], output: "Aging schedule", route: "/customers/credits" },
-  { id: "product-ranking", title: "Product Ranking", category: "Sales", description: "Rank products by quantity sold, revenue, or estimated profit.", icon: BarChart3, filters: ["Locations", "Date Range", "Items", "Categories", "Rank By"], output: "Ranked list" },
+  { id: "product-ranking", title: "Product Ranking", category: "Sales", description: "Rank products by quantity sold, revenue, or gross profit.", icon: BarChart3, filters: ["Locations", "Date Range", "Items", "Categories", "Rank By"], output: "Ranked list" },
   { id: "payment-breakdown", title: "Payment Method Breakdown", category: "Sales", description: "Sales totals grouped by cash, bank, credit, and mixed payments.", icon: CreditCard, filters: ["Locations", "Date Range", "Payment Method", "Bank Accounts"], output: "Payment summary" },
-  { id: "periodic-comparison", title: "Periodic Comparison", category: "Sales", description: "Compare two or three date ranges for sales, volume, and margin.", icon: FileClock, filters: ["Locations", "Date Range", "Compare Range", "Metric"], output: "Comparison chart" },
+  { id: "periodic-comparison", title: "Periodic Comparison", category: "Sales", description: "Compare date ranges for sales, volume, and gross profit.", icon: FileClock, filters: ["Locations", "Date Range", "Compare Range", "Metric"], output: "Comparison chart" },
   { id: "discounted-items", title: "Discounted Items", category: "Sales", description: "List sold items where discounts were applied.", icon: ReceiptText, filters: ["Locations", "Date Range", "Items", "Discount Range"], output: "Discount table" },
 
   { id: "stock-valuation", title: "Stock Valuation", category: "Inventory", description: "Current stock value by product and location.", icon: Layers, filters: ["Locations", "Items", "Categories", "Valuation Basis"], output: "Valuation summary" },
@@ -76,6 +78,8 @@ const reports: ReportDefinition[] = [
 export default function ReportsPage() {
   const state = useAppData();
   const { locations } = state;
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeCategory, setActiveCategory] = React.useState<Category>("All");
   const [search, setSearch] = React.useState("");
   const [selectedLocationId, setSelectedLocationId] = React.useState("");
@@ -86,6 +90,10 @@ export default function ReportsPage() {
   React.useEffect(() => {
     if (state.currentLocation?.id) setSelectedLocationId(state.currentLocation.id);
   }, [state.currentLocation?.id]);
+  React.useEffect(() => {
+    const reportId = searchParams.get("report");
+    setOpenedReportId(reportId && reports.some((report) => report.id === reportId) ? reportId : null);
+  }, [searchParams]);
 
   const filteredReports = reports.filter((report) => {
     const searchHaystack = `${report.title} ${report.description} ${report.category} ${report.filters.join(" ")}`.toLowerCase();
@@ -108,7 +116,10 @@ export default function ReportsPage() {
         dateFrom={dateFrom}
         dateTo={dateTo}
         selectedLocationId={selectedLocationId}
-        onBack={() => setOpenedReportId(null)}
+        onBack={() => {
+          setOpenedReportId(null);
+          router.push("/reports");
+        }}
       />
     );
   }
@@ -187,7 +198,10 @@ export default function ReportsPage() {
             <ReportCard
               key={report.id}
               report={report}
-              onOpen={() => setOpenedReportId(report.id)}
+              onOpen={() => {
+                setOpenedReportId(report.id);
+                router.push(`/reports?report=${report.id}`);
+              }}
             />
           ))}
         </div>
@@ -292,12 +306,19 @@ function ReportDetailView({
     accountId: "",
     status: "",
   });
+  const [page, setPage] = React.useState(1);
   const rows = buildReportRows(report.id, state, filters);
   const columns = rows.length > 0 ? Object.keys(rows[0]).filter((key) => !key.startsWith("_")) : defaultColumns(report.id);
   const totals = summarizeRows(rows);
+  const pagedRows = paginateRows(rows, page, 20);
   const activeFilterCount = Object.entries(filters).filter(([, value]) => Boolean(value)).length;
-  const setFilter = (key: keyof ReportFilters, value: string) => setFilters((current) => ({ ...current, [key]: value }));
-  const resetReportFilters = () => setFilters({
+  const setFilter = (key: keyof ReportFilters, value: string) => {
+    setPage(1);
+    setFilters((current) => ({ ...current, [key]: value }));
+  };
+  const resetReportFilters = () => {
+    setPage(1);
+    setFilters({
     search: "",
     locationId: "",
     dateFrom: "",
@@ -310,7 +331,13 @@ function ReportDetailView({
     accountId: "",
     status: "",
   });
-  const categoryOptions = Array.from(new Set<string>((state.items || []).map((item) => String(item.category || "")).filter(Boolean))).sort();
+  };
+  React.useEffect(() => {
+    setPage(1);
+  }, [report.id]);
+  const reportItems = [...(state.products || []), ...(state.items || [])]
+    .filter((item, index, entries) => entries.findIndex((entry) => entry.id === item.id) === index);
+  const categoryOptions = Array.from(new Set<string>(reportItems.map((item) => String(item.category || "")).filter(Boolean))).sort();
   const expenseCategoryOptions = Array.from(new Set<string>((state.expenses || []).map((expense) => String(expense.category || "")).filter(Boolean))).sort();
   const showCustomerFilter = ["sales-list", "sold-items", "sales-profitability", "customer-credit-aging", "discounted-items"].includes(report.id);
   const showSupplierFilter = ["purchase-list", "purchased-items", "supplier-payables"].includes(report.id);
@@ -381,7 +408,7 @@ function ReportDetailView({
           <DateFilter label="To" value={filters.dateTo} onChange={(value) => setFilter("dateTo", value)} />
           <SelectFilter label="Customer" value={filters.customerId} onChange={(value) => setFilter("customerId", value)} hidden={!showCustomerFilter} options={(state.customers || []).map((customer) => ({ value: String(customer.id), label: String(customer.name) }))} />
           <SelectFilter label="Supplier" value={filters.supplierId} onChange={(value) => setFilter("supplierId", value)} hidden={!showSupplierFilter} options={(state.suppliers || []).map((supplier) => ({ value: String(supplier.id), label: String(supplier.name) }))} />
-          <SelectFilter label="Item" value={filters.itemId} onChange={(value) => setFilter("itemId", value)} hidden={!showItemFilter} options={(state.items || []).map((item) => ({ value: String(item.id), label: String(item.name) }))} />
+          <SelectFilter label="Item" value={filters.itemId} onChange={(value) => setFilter("itemId", value)} hidden={!showItemFilter} options={reportItems.map((item) => ({ value: String(item.id), label: String(item.name) }))} />
           <SelectFilter label="Category" value={filters.category} onChange={(value) => setFilter("category", value)} hidden={!showCategoryFilter} options={(report.id === "expense-analysis" ? expenseCategoryOptions : categoryOptions).map((category) => ({ value: category, label: category }))} />
           <SelectFilter label="Account" value={filters.accountId} onChange={(value) => setFilter("accountId", value)} hidden={!showAccountFilter} options={(state.bankAccounts || []).map((account) => ({ value: String(account.id), label: String(account.displayName) }))} />
           <SelectFilter label="Status" value={filters.status} onChange={(value) => setFilter("status", value)} hidden={!showStatusFilter} options={["OK", "Low Stock", "Payable", "Current"].map((status) => ({ value: status, label: status }))} />
@@ -404,7 +431,7 @@ function ReportDetailView({
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-4 dark:border-zinc-800">
           <div>
             <h2 className="text-lg font-black text-slate-950 dark:text-white">{report.output}</h2>
-            <p className="text-xs font-semibold text-slate-500">Simple report table generated from current app data.</p>
+            <p className="text-xs font-semibold text-slate-500">Report table generated from current database-backed app data.</p>
           </div>
           <button className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800 dark:bg-zinc-950">
             Export
@@ -427,7 +454,7 @@ function ReportDetailView({
                     No records found
                   </td>
                 </tr>
-              ) : rows.map((row, index) => (
+              ) : pagedRows.rows.map((row, index) => (
                 <tr key={index} className="hover:bg-slate-50 dark:hover:bg-zinc-800/30">
                   {columns.map((column) => (
                     <td key={column} className="whitespace-nowrap px-4 py-3 text-sm font-semibold text-slate-600 dark:text-zinc-300">
@@ -447,6 +474,13 @@ function ReportDetailView({
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+          <span>Page {pagedRows.page} of {pagedRows.totalPages} - {rows.length} rows</span>
+          <div className="flex gap-2">
+            <button type="button" disabled={pagedRows.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
+            <button type="button" disabled={pagedRows.page >= pagedRows.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
+          </div>
         </div>
       </section>
     </div>
@@ -534,7 +568,7 @@ function buildReportRows(
   const locationName = (id?: string) => state.locations.find((location) => location.id === id)?.name || "-";
   const customerName = (id?: string | null) => state.customers.find((customer) => customer.id === id)?.name || "Walk-in Customer";
   const supplierName = (id?: string) => state.suppliers.find((supplier) => supplier.id === id)?.name || "No Supplier";
-  const itemById = (id?: string) => state.items.find((item) => item.id === id);
+  const itemById = (id?: string) => state.items.find((item) => item.id === id) || (state.products || []).find((item) => item.id === id);
   const bankName = (id?: string) => state.bankAccounts.find((account) => account.id === id)?.displayName || "-";
   const inRange = (date: Date | string) => {
     const time = new Date(date).getTime();
@@ -569,11 +603,14 @@ function buildReportRows(
       ).map((sale) => ({
         Date: formatDate(sale.saleDate),
         "Sale ID": sale.id,
+        Items: saleItemSummary(sale, state.products || [], state.items || []),
         Customer: customerName(sale.customerId),
         Location: locationName(sale.locationId),
         Payment: sale.paymentMethod,
         Amount: formatCurrency(sale.totalAmount),
+        Profit: formatCurrency(saleProfit(sale)),
         _amount: sale.totalAmount,
+        _profit: saleProfit(sale),
         _href: `/sales/${sale.id}`,
       })));
     case "sold-items":
@@ -613,15 +650,14 @@ function buildReportRows(
       ).flatMap((sale) =>
         sale.items.filter((line) => matchesItem(line.itemId) && matchesCategory(line.itemId)).map((line) => {
           const item = itemById(line.itemId);
-          const cost = (item?.price || line.price) * 0.75 * line.qty;
-          const profit = line.total - cost;
+          const cost = Number(line.buyingPrice || item?.buyingPrice || 0) * Number(line.qty || 0);
+          const profit = Number(line.profit ?? (Number(line.total || 0) - cost));
           return {
             Date: formatDate(sale.saleDate),
-            Item: item?.name || line.itemId,
+            Item: line.itemName || item?.name || line.itemId,
             Revenue: formatCurrency(line.total),
             Cost: formatCurrency(cost),
             Profit: formatCurrency(profit),
-            Margin: `${line.total ? Math.round((profit / line.total) * 100) : 0}%`,
             _amount: profit,
             _quantity: line.qty,
             _href: `/sales/${sale.id}`,
@@ -642,13 +678,15 @@ function buildReportRows(
         _href: `/customers/${customer.id}`,
       })));
     case "product-ranking": {
-      const grouped = new Map<string, { item: string; qty: number; amount: number }>();
+      const grouped = new Map<string, { item: string; qty: number; amount: number; profit: number }>();
       state.sales.filter((sale) => inRange(sale.saleDate) && matchesLocation(sale.locationId)).forEach((sale) => {
         sale.items.filter((line) => matchesItem(line.itemId) && matchesCategory(line.itemId)).forEach((line) => {
           const item = itemById(line.itemId);
-          const entry = grouped.get(line.itemId) || { item: item?.name || line.itemId, qty: 0, amount: 0 };
+          const cost = Number(line.buyingPrice || item?.buyingPrice || 0) * Number(line.qty || 0);
+          const entry = grouped.get(line.itemId) || { item: line.itemName || item?.name || line.itemId, qty: 0, amount: 0, profit: 0 };
           entry.qty += line.qty;
           entry.amount += line.total;
+          entry.profit += Number(line.profit ?? (Number(line.total || 0) - cost));
           grouped.set(line.itemId, entry);
         });
       });
@@ -657,6 +695,7 @@ function buildReportRows(
         Item: entry.item,
         Qty: entry.qty,
         Revenue: formatCurrency(entry.amount),
+        Profit: formatCurrency(entry.profit),
         _amount: entry.amount,
         _quantity: entry.qty,
       })));
@@ -681,6 +720,7 @@ function buildReportRows(
       ).map((sale) => ({
         Period: formatDate(sale.saleDate),
         Sales: formatCurrency(sale.totalAmount),
+        Profit: formatCurrency(saleProfit(sale)),
         Items: sale.items.reduce((sum, line) => sum + line.qty, 0),
         _amount: sale.totalAmount,
       })));

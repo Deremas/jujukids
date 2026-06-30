@@ -15,6 +15,27 @@ export type LedgerTransaction = {
   sourceId: string;
 };
 
+export function movementSummary(transactions: LedgerTransaction[], storedCurrentBalance = 0) {
+  const totalInflow = transactions
+    .filter((tx) => tx.type === "INCOME" || tx.method === "BANK_IN")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  const totalOutflow = transactions
+    .filter((tx) => tx.type === "EXPENSE" || tx.method === "CASH_OUT")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  const netMovement = totalInflow - totalOutflow;
+  const openingBalance = Math.abs(storedCurrentBalance - netMovement) < 0.01
+    ? 0
+    : storedCurrentBalance - netMovement;
+
+  return {
+    openingBalance,
+    totalInflow,
+    totalOutflow,
+    netMovement,
+    availableBalance: openingBalance + netMovement,
+  };
+}
+
 export function buildLedgerTransactions(state: {
   sales: any[];
   purchases: any[];
@@ -23,9 +44,21 @@ export function buildLedgerTransactions(state: {
   supplierPayments: any[];
   bankAccounts: any[];
   cashTransfers?: any[];
+  items?: any[];
+  products?: any[];
 }): LedgerTransaction[] {
   const accountName = (accountId: string) =>
     state.bankAccounts.find((account) => account.id === accountId)?.displayName || "Unknown Account";
+  const saleDescription = (sale: any) => {
+    const names = (sale.items || []).map((line: any) => {
+      const product = (state.products || []).find((entry) => entry.id === line.itemId);
+      const stockItem = (state.items || []).find((entry) => entry.id === line.itemId);
+      return line.itemName || product?.name || stockItem?.name || line.itemId;
+    });
+    if (names.length === 0) return `Sale ${sale.id}`;
+    if (names.length <= 2) return `Sale: ${names.join(", ")}`;
+    return `Sale: ${names.slice(0, 2).join(", ")} +${names.length - 2} more`;
+  };
 
   const rows: LedgerTransaction[] = [];
 
@@ -35,7 +68,7 @@ export function buildLedgerTransactions(state: {
         id: `${sale.id}-cash`,
         type: "INCOME",
         category: "Sale",
-        description: `Cash sale ${sale.id}`,
+        description: saleDescription(sale),
         amount: sale.cashAmount,
         date: new Date(sale.saleDate),
         method: "CASH",
@@ -51,7 +84,7 @@ export function buildLedgerTransactions(state: {
         id: `${sale.id}-bank`,
         type: "INCOME",
         category: "Sale",
-        description: `Bank sale ${sale.id}`,
+        description: saleDescription(sale),
         amount: sale.bankAmount,
         date: new Date(sale.saleDate),
         method: "BANK",

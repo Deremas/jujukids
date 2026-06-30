@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { MultiSelectDropdown } from "@/components/multi-select-dropdown";
+import { paginateRows } from "@/lib/sales-utils";
 
 type AccountOption = {
   id: string;
@@ -51,6 +52,7 @@ export function TransactionsClient({
   const [search, setSearch] = React.useState("");
   const [locationFilters, setLocationFilters] = React.useState<string[]>(initialLocationIds);
   const [accountFilters, setAccountFilters] = React.useState<string[]>([]);
+  const [page, setPage] = React.useState(1);
 
   const filteredTransactions = transactions.filter((tx) => {
     const matchesSearch = `${tx.id} ${tx.category} ${tx.description} ${tx.accountName}`
@@ -67,6 +69,19 @@ export function TransactionsClient({
   const expense = filteredTransactions
     .filter((tx) => tx.type === "EXPENSE")
     .reduce((sum, tx) => sum + tx.amount, 0);
+  const pagedTransactions = paginateRows(filteredTransactions, page, 20);
+  const setSearchFilter = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+  const setLocationFilterValues = (values: string[]) => {
+    setLocationFilters(values);
+    setPage(1);
+  };
+  const setAccountFilterValues = (values: string[]) => {
+    setAccountFilters(values);
+    setPage(1);
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 font-sans">
@@ -89,7 +104,7 @@ export function TransactionsClient({
               type="text"
               placeholder="Search by transaction, category, or account..."
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => setSearchFilter(event.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm font-medium outline-none focus:ring-1 focus:ring-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
             />
           </div>
@@ -98,14 +113,14 @@ export function TransactionsClient({
             allLabel="All"
             options={locations.map((location) => ({ value: location.id, label: location.name }))}
             selected={locationFilters}
-            onChange={setLocationFilters}
+            onChange={setLocationFilterValues}
           />
           <MultiSelectDropdown
             label="Accounts"
             allLabel="All"
             options={accounts.map((account) => ({ value: account.id, label: account.displayName }))}
             selected={accountFilters}
-            onChange={setAccountFilters}
+            onChange={setAccountFilterValues}
           />
         </div>
 
@@ -129,7 +144,7 @@ export function TransactionsClient({
                     No transactions found
                   </td>
                 </tr>
-              ) : filteredTransactions.map((tx) => (
+              ) : pagedTransactions.rows.map((tx) => (
                 <tr key={tx.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/20">
                   <td className="px-6 py-4">
                     <p className="text-sm font-black uppercase tracking-tighter text-slate-800 dark:text-zinc-200">{tx.category}</p>
@@ -174,6 +189,13 @@ export function TransactionsClient({
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+          <span>Page {pagedTransactions.page} of {pagedTransactions.totalPages} - {filteredTransactions.length} transactions</span>
+          <div className="flex gap-2">
+            <button type="button" disabled={pagedTransactions.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
+            <button type="button" disabled={pagedTransactions.page >= pagedTransactions.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
+          </div>
         </div>
       </div>
     </div>

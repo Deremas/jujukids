@@ -24,6 +24,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useAppData } from "@/lib/client/useAppData";
 import { formatCurrency } from "@/lib/utils";
+import { saleProfit } from "@/lib/sales-utils";
 
 // ─── Helper ────────────────────────────────────────────────────────────────
 
@@ -183,12 +184,10 @@ export default function FinanceReportsPage() {
 
   // ── Core metrics ───────────────────────────────────────────────────────
   const totalRevenue = filteredSales.reduce((s: number, x: any) => s + Number(x.totalAmount || 0), 0);
-  const totalCOGS = filteredPurchases.reduce((s: number, x: any) => s + Number(x.totalAmount || 0), 0);
-  const grossProfit = totalRevenue - totalCOGS;
+  const grossProfit = filteredSales.reduce((s: number, x: any) => s + saleProfit(x), 0);
+  const totalCOGS = totalRevenue - grossProfit;
   const totalExpenses = filteredExpenses.reduce((s: number, x: any) => s + Number(x.amount || 0), 0);
   const netProfit = grossProfit - totalExpenses;
-  const grossMarginPct = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
-  const netMarginPct = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   // ── Cash flow ──────────────────────────────────────────────────────────
   const cashIn =
@@ -392,7 +391,7 @@ export default function FinanceReportsPage() {
         <KpiCard
           title="Gross Profit"
           value={formatCurrency(grossProfit)}
-          sub={`${grossMarginPct.toFixed(1)}% margin`}
+          sub={`${filteredSales.length} sales profit`}
           icon={DollarSign}
           color={grossProfit >= 0 ? "indigo" : "rose"}
           trend={grossProfit >= 0 ? "up" : "down"}
@@ -408,7 +407,7 @@ export default function FinanceReportsPage() {
         <KpiCard
           title="Net Profit"
           value={formatCurrency(netProfit)}
-          sub={`${netMarginPct.toFixed(1)}% margin`}
+          sub="gross profit minus expenses"
           icon={Landmark}
           color={netProfit >= 0 ? "violet" : "rose"}
           trend={netProfit >= 0 ? "up" : "down"}
@@ -538,7 +537,7 @@ export default function FinanceReportsPage() {
             <div className="space-y-3">
               {[
                 { label: "Total Revenue", value: totalRevenue, color: "emerald" as const },
-                { label: "Cost of Goods (Purchases)", value: -totalCOGS, color: "rose" as const },
+                { label: "Cost of Goods Sold", value: -totalCOGS, color: "rose" as const },
                 { label: "Gross Profit", value: grossProfit, color: grossProfit >= 0 ? "indigo" as const : "rose" as const, bold: true },
                 { label: "Operating Expenses", value: -totalExpenses, color: "amber" as const },
                 { label: "Net Profit / Loss", value: netProfit, color: netProfit >= 0 ? "violet" as const : "rose" as const, bold: true },

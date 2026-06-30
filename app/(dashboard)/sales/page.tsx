@@ -9,10 +9,15 @@ import Link from "next/link";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useAppData } from "@/lib/client/useAppData";
 import { motion, AnimatePresence } from "motion/react";
+import { paginateRows, saleItemSummary, saleProfit } from "@/lib/sales-utils";
 
 export default function SalesListPage() {
-  const { sales, currentLocation, locations, customers, deleteSale } = useAppData();
+  const { sales, currentLocation, locations, customers, products = [], items = [], deleteSale } = useAppData();
   const [search, setSearch] = useState("");
+  const [locationId, setLocationId] = useState(currentLocation?.id || "");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
   const [viewSale, setViewSale] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
@@ -41,23 +46,34 @@ export default function SalesListPage() {
     }
   };
 
+  React.useEffect(() => {
+    setLocationId(currentLocation?.id || "");
+  }, [currentLocation?.id]);
+
   const filteredSales = sales
     .map((sale, index) => ({ sale, index }))
     .filter(({ sale }) => {
       const customer = customers.find(c => c.id === sale.customerId);
-      const matchesSearch = sale.id.toLowerCase().includes(search.toLowerCase()) ||
-        customer?.name.toLowerCase().includes(search.toLowerCase());
-      if (currentLocation) return matchesSearch && sale.locationId === currentLocation.id;
-      return matchesSearch;
+      const q = search.toLowerCase();
+      const itemNames = saleItemSummary(sale, products, items).toLowerCase();
+      const matchesSearch = sale.id.toLowerCase().includes(q) ||
+        customer?.name.toLowerCase().includes(q) ||
+        itemNames.includes(q);
+      const saleTime = new Date(sale.saleDate).getTime();
+      const matchesDateFrom = !dateFrom || saleTime >= new Date(dateFrom).getTime();
+      const matchesDateTo = !dateTo || saleTime <= new Date(dateTo).getTime() + 86400000 - 1;
+      return matchesSearch && (!locationId || sale.locationId === locationId) && matchesDateFrom && matchesDateTo;
     })
     .sort((a, b) => {
       const dateDiff = new Date(b.sale.saleDate).getTime() - new Date(a.sale.saleDate).getTime();
       return dateDiff || b.index - a.index;
     })
     .map(({ sale }) => sale);
+  const pagedSales = paginateRows<any>(filteredSales, page, 15);
 
   const stats = {
     total: filteredSales.reduce((acc, s) => acc + s.totalAmount, 0),
+    profit: filteredSales.reduce((acc, s) => acc + saleProfit(s), 0),
     completed: filteredSales.length,
     outstanding: filteredSales.reduce((acc, s) => acc + s.creditAmount, 0),
     count: filteredSales.length
@@ -85,38 +101,58 @@ export default function SalesListPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <StatCard title="Total Revenue" value={formatCurrency(stats.total)} icon={ShoppingCart} />
+        <StatCard title="Total Profit" value={formatCurrency(stats.profit)} icon={ArrowUpRight} color="emerald" />
         <StatCard title="Tx Volume" value={stats.completed} icon={ArrowUpRight} color="emerald" />
         <StatCard title="Consumer Debt" value={formatCurrency(stats.outstanding)} icon={CreditCard} color="amber" />
         <StatCard title="Active Locations" value={locations.length} icon={Store} color="rose" />
       </div>
 
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm transition-colors">
-        <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 border-b border-slate-100 dark:border-zinc-800 grid gap-3 lg:grid-cols-[minmax(260px,1fr)_180px_160px_160px]">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search by ID or customer..."
+              placeholder="Search by item, ID or customer..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:ring-1 focus:ring-indigo-500 text-xs transition-all font-bold"
             />
           </div>
+          <select
+            value={locationId}
+            onChange={(event) => {
+              setLocationId(event.target.value);
+              setPage(1);
+            }}
+            className="rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-black uppercase tracking-widest text-slate-600 outline-none dark:border-zinc-800 dark:bg-zinc-950"
+          >
+            <option value="">All Locations</option>
+            {locations.map((location: any) => (
+              <option key={location.id} value={location.id}>{location.name}</option>
+            ))}
+          </select>
+          <input type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); setPage(1); }} className="rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-bold outline-none dark:border-zinc-800 dark:bg-zinc-950" />
+          <input type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); setPage(1); }} className="rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-bold outline-none dark:border-zinc-800 dark:bg-zinc-950" />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-zinc-950/50 border-b border-slate-100 dark:border-zinc-800">
-                <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Tx ID</th>
-                {!currentLocation && <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Shop/Store</th>}
+                <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Items Sold</th>
+                {!locationId && <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Shop/Store</th>}
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Consumer</th>
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Timeline</th>
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Protocol</th>
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Bank Account</th>
                 <th className="px-6 py-4 text-right text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Magnitude</th>
+                <th className="px-6 py-4 text-right text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Profit</th>
                 <th className="px-6 py-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Actions</th>
               </tr>
@@ -124,17 +160,20 @@ export default function SalesListPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
               {filteredSales.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest opacity-50">
+                  <td colSpan={!locationId ? 10 : 9} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest opacity-50">
                     No transactions captured
                   </td>
                 </tr>
               ) : (
-                filteredSales.map((sale) => {
+                pagedSales.rows.map((sale) => {
                   const customer = customers.find(c => c.id === sale.customerId);
                   return (
                     <tr key={sale.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
-                      <td className="px-6 py-4 text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter">{sale.id}</td>
-                      {!currentLocation && (
+                      <td className="px-6 py-4">
+                        <p className="max-w-[260px] truncate text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{saleItemSummary(sale, products, items)}</p>
+                        <p className="mt-1 font-mono text-[9px] font-bold uppercase text-slate-400">{sale.id}</p>
+                      </td>
+                      {!locationId && (
                         <td className="px-6 py-4">
                           <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black uppercase">
                             {locations.find(b => b.id === sale.locationId)?.name}
@@ -165,6 +204,7 @@ export default function SalesListPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right text-xs font-black text-slate-900 dark:text-zinc-100">{formatCurrency(sale.totalAmount)}</td>
+                      <td className="px-6 py-4 text-right text-xs font-black text-emerald-600">{formatCurrency(saleProfit(sale))}</td>
                       <td className="px-6 py-4 text-center">
                         <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-700/20 dark:text-emerald-400">
                           COMPLETED
@@ -197,6 +237,13 @@ export default function SalesListPage() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+          <span>Page {pagedSales.page} of {pagedSales.totalPages} - {filteredSales.length} sales</span>
+          <div className="flex gap-2">
+            <button type="button" disabled={pagedSales.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
+            <button type="button" disabled={pagedSales.page >= pagedSales.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
+          </div>
         </div>
       </div>
 
@@ -237,8 +284,8 @@ export default function SalesListPage() {
                   <div className="space-y-1.5 max-h-40 overflow-y-auto">
                     {viewSale.items.map((item: any) => (
                       <div key={item.id} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-zinc-800 rounded-lg px-3 py-2">
-                        <span className="font-bold text-slate-700 dark:text-zinc-300">{item.itemId}</span>
-                        <span className="font-mono text-slate-500">×{item.qty} → {formatCurrency(item.total)}</span>
+                        <span className="font-bold text-slate-700 dark:text-zinc-300">{item.itemName || item.itemId}</span>
+                        <span className="font-mono text-slate-500">x{item.qty} - {formatCurrency(item.total)}</span>
                       </div>
                     ))}
                   </div>
