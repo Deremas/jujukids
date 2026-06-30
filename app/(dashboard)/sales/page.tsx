@@ -18,6 +18,7 @@ export default function SalesListPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const [viewSale, setViewSale] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
@@ -69,7 +70,7 @@ export default function SalesListPage() {
       return dateDiff || b.index - a.index;
     })
     .map(({ sale }) => sale);
-  const pagedSales = paginateRows<any>(filteredSales, page, 15);
+  const pagedSales = paginateRows<any>(filteredSales, page, pageSize);
 
   const stats = {
     total: filteredSales.reduce((acc, s) => acc + s.totalAmount, 0),
@@ -149,9 +150,9 @@ export default function SalesListPage() {
                 {!locationId && <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Shop/Store</th>}
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Consumer</th>
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Timeline</th>
-                <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Protocol</th>
+                <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Payment Method</th>
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Bank Account</th>
-                <th className="px-6 py-4 text-right text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Magnitude</th>
+                <th className="px-6 py-4 text-right text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Total Amount</th>
                 <th className="px-6 py-4 text-right text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Profit</th>
                 <th className="px-6 py-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Actions</th>
@@ -240,7 +241,19 @@ export default function SalesListPage() {
         </div>
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
           <span>Page {pagedSales.page} of {pagedSales.totalPages} - {filteredSales.length} sales</span>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-black uppercase tracking-widest outline-none dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              {[10, 15, 25, 50].map((size) => (
+                <option key={size} value={size}>{size} / page</option>
+              ))}
+            </select>
             <button type="button" disabled={pagedSales.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
             <button type="button" disabled={pagedSales.page >= pagedSales.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
           </div>

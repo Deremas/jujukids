@@ -31,9 +31,8 @@ export default function CashToBankPage() {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
 
-  const handleSubmit = () => {
-    const result = state.addCashTransfer({
-      id: `CB-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+  const handleSubmit = async () => {
+    const result = await state.addCashTransfer({
       locationId,
       bankAccountId,
       amount,

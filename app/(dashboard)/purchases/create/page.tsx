@@ -109,14 +109,16 @@ export default function NewPurchasePage() {
     }));
   };
 
-  const handleQuickAddSupplier = () => {
+  const handleQuickAddSupplier = async () => {
     if (newSupplier.name) {
-      const id = "S-" + Math.random().toString(36).substr(2, 4).toUpperCase();
-      const s = { ...newSupplier, id, debt: 0 };
-      addSupplier(s);
-      setSelectedSupplierId(id);
-      setShowSupplierModal(false);
-      setNewSupplier({ name: "", contact: "", phone: "" });
+      try {
+        const result = await addSupplier(newSupplier);
+        setSelectedSupplierId(result.id);
+        setShowSupplierModal(false);
+        setNewSupplier({ name: "", contact: "", phone: "" });
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Supplier could not be added.");
+      }
     }
   };
 

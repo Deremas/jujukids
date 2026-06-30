@@ -53,6 +53,7 @@ export function TransactionsClient({
   const [locationFilters, setLocationFilters] = React.useState<string[]>(initialLocationIds);
   const [accountFilters, setAccountFilters] = React.useState<string[]>([]);
   const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
 
   const filteredTransactions = transactions.filter((tx) => {
     const matchesSearch = `${tx.id} ${tx.category} ${tx.description} ${tx.accountName}`
@@ -69,7 +70,7 @@ export function TransactionsClient({
   const expense = filteredTransactions
     .filter((tx) => tx.type === "EXPENSE")
     .reduce((sum, tx) => sum + tx.amount, 0);
-  const pagedTransactions = paginateRows(filteredTransactions, page, 20);
+  const pagedTransactions = paginateRows(filteredTransactions, page, pageSize);
   const setSearchFilter = (value: string) => {
     setSearch(value);
     setPage(1);
@@ -192,7 +193,19 @@ export function TransactionsClient({
         </div>
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
           <span>Page {pagedTransactions.page} of {pagedTransactions.totalPages} - {filteredTransactions.length} transactions</span>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-black uppercase tracking-widest outline-none dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              {[10, 15, 25, 50].map((size) => (
+                <option key={size} value={size}>{size} / page</option>
+              ))}
+            </select>
             <button type="button" disabled={pagedTransactions.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
             <button type="button" disabled={pagedTransactions.page >= pagedTransactions.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
           </div>

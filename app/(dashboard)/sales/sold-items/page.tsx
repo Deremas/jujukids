@@ -6,18 +6,21 @@ import { ReceiptText, Search } from "lucide-react";
 
 import { useAppData } from "@/lib/client/useAppData";
 import { formatCurrency } from "@/lib/utils";
+import { paginateRows } from "@/lib/sales-utils";
 
 export default function SoldItemsPage() {
-  const { sales, items, locations, customers, currentLocation } = useAppData();
+  const { sales, items, products = [], locations, customers, currentLocation } = useAppData();
   const [search, setSearch] = React.useState("");
   const [locationId, setLocationId] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(15);
 
   React.useEffect(() => {
     if (currentLocation?.id) setLocationId(currentLocation.id);
   }, [currentLocation?.id]);
 
-  const itemName = (id: string) => items.find((item: any) => item.id === id)?.name || id;
-  const itemCode = (id: string) => items.find((item: any) => item.id === id)?.code || "";
+  const itemName = (id: string) => products.find((item: any) => item.id === id)?.name || items.find((item: any) => item.id === id)?.name || id;
+  const itemCode = (id: string) => products.find((item: any) => item.id === id)?.code || items.find((item: any) => item.id === id)?.code || "";
   const customerName = (id?: string | null) => customers.find((customer: any) => customer.id === id)?.name || "Walk-in Customer";
   const locationName = (id: string) => locations.find((location: any) => location.id === id)?.name || "-";
 
@@ -27,7 +30,7 @@ export default function SoldItemsPage() {
       sale.items.map((line: any) => ({
         sale,
         line,
-        item: itemName(line.itemId),
+        item: line.itemName || itemName(line.itemId),
         code: itemCode(line.itemId),
         customer: customerName(sale.customerId),
         location: locationName(sale.locationId),
@@ -37,6 +40,7 @@ export default function SoldItemsPage() {
       const haystack = `${row.sale.id} ${row.item} ${row.code} ${row.customer} ${row.location}`.toLowerCase();
       return haystack.includes(search.toLowerCase());
     });
+  const pagedRows = paginateRows<any>(rows, page, pageSize);
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-500">
@@ -53,14 +57,20 @@ export default function SoldItemsPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
               placeholder="Search sold items..."
               className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-900 sm:w-72"
             />
           </div>
           <select
             value={locationId}
-            onChange={(event) => setLocationId(event.target.value)}
+            onChange={(event) => {
+              setLocationId(event.target.value);
+              setPage(1);
+            }}
             className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black uppercase tracking-widest text-slate-600 outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-900"
           >
             <option value="">All Locations</option>
@@ -94,7 +104,7 @@ export default function SoldItemsPage() {
                     No sold items found
                   </td>
                 </tr>
-              ) : rows.map((row: any) => (
+              ) : pagedRows.rows.map((row: any) => (
                 <tr key={`${row.sale.id}-${row.line.id}`} className="hover:bg-slate-50 dark:hover:bg-zinc-800/30">
                   <td className="px-5 py-4 text-sm font-semibold text-slate-500">{new Date(row.sale.saleDate).toLocaleDateString()}</td>
                   <td className="px-5 py-4 text-sm font-black text-slate-950 dark:text-white">{row.sale.id}</td>
@@ -116,6 +126,25 @@ export default function SoldItemsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+          <span>Page {pagedRows.page} of {pagedRows.totalPages} - {rows.length} sold items</span>
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-black uppercase tracking-widest outline-none dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              {[10, 15, 25, 50].map((size) => (
+                <option key={size} value={size}>{size} / page</option>
+              ))}
+            </select>
+            <button type="button" disabled={pagedRows.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
+            <button type="button" disabled={pagedRows.page >= pagedRows.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
+          </div>
         </div>
       </div>
     </div>

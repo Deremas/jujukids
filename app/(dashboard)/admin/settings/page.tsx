@@ -65,6 +65,9 @@ export default function SystemSettingsPage() {
       setLowStockThreshold(settings.lowStockThreshold ?? 10);
       setEnableNotifications(settings.enableNotifications ?? true);
       setEnableEmailAlerts(settings.enableEmailAlerts ?? false);
+      setPasswordStrength(settings.passwordStrength || "Medium");
+      setSessionTimeout("24 Hours");
+      setRequire2FA(settings.require2FA ?? false);
     }
   }, [settings]);
 
@@ -76,41 +79,34 @@ export default function SystemSettingsPage() {
     }
   }, [toast]);
 
-  const handleSaveCompany = (e: React.FormEvent) => {
+  const handleSaveCompany = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings({
-      companyName,
-      companyEmail,
-      companyPhone,
-      companyAddress,
-      currency,
-      taxRate: Number(taxRate),
-    });
-    setToast({
-      message: "Company profile settings saved successfully!",
-      type: "success",
-    });
+    try {
+      await updateSettings({ companyName, companyEmail, companyPhone, companyAddress, currency, taxRate: Number(taxRate) });
+      setToast({ message: "Company profile settings saved successfully!", type: "success" });
+    } catch (error) {
+      setToast({ message: error instanceof Error ? error.message : "Settings could not be saved.", type: "error" });
+    }
   };
 
-  const handleSaveNotifications = (e: React.FormEvent) => {
+  const handleSaveNotifications = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings({
-      lowStockThreshold: Number(lowStockThreshold),
-      enableNotifications,
-      enableEmailAlerts,
-    });
-    setToast({
-      message: "Notification threshold rules updated!",
-      type: "success",
-    });
+    try {
+      await updateSettings({ lowStockThreshold: Number(lowStockThreshold), enableNotifications, enableEmailAlerts });
+      setToast({ message: "Notification threshold rules updated!", type: "success" });
+    } catch (error) {
+      setToast({ message: error instanceof Error ? error.message : "Notification settings could not be saved.", type: "error" });
+    }
   };
 
-  const handleSaveSecurity = (e: React.FormEvent) => {
+  const handleSaveSecurity = async (e: React.FormEvent) => {
     e.preventDefault();
-    setToast({
-      message: "Security policy preferences saved!",
-      type: "success",
-    });
+    try {
+      await updateSettings({ passwordStrength, require2FA });
+      setToast({ message: "Security preferences saved. Login sessions remain fixed at 24 hours.", type: "success" });
+    } catch (error) {
+      setToast({ message: error instanceof Error ? error.message : "Security preferences could not be saved.", type: "error" });
+    }
   };
 
   // Backup / Restore logic

@@ -307,10 +307,11 @@ function ReportDetailView({
     status: "",
   });
   const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
   const rows = buildReportRows(report.id, state, filters);
   const columns = rows.length > 0 ? Object.keys(rows[0]).filter((key) => !key.startsWith("_")) : defaultColumns(report.id);
   const totals = summarizeRows(rows);
-  const pagedRows = paginateRows(rows, page, 20);
+  const pagedRows = paginateRows(rows, page, pageSize);
   const activeFilterCount = Object.entries(filters).filter(([, value]) => Boolean(value)).length;
   const setFilter = (key: keyof ReportFilters, value: string) => {
     setPage(1);
@@ -477,7 +478,19 @@ function ReportDetailView({
         </div>
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
           <span>Page {pagedRows.page} of {pagedRows.totalPages} - {rows.length} rows</span>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-black uppercase tracking-widest outline-none dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              {[10, 15, 25, 50].map((size) => (
+                <option key={size} value={size}>{size} / page</option>
+              ))}
+            </select>
             <button type="button" disabled={pagedRows.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
             <button type="button" disabled={pagedRows.page >= pagedRows.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
           </div>
@@ -650,8 +663,8 @@ function buildReportRows(
       ).flatMap((sale) =>
         sale.items.filter((line) => matchesItem(line.itemId) && matchesCategory(line.itemId)).map((line) => {
           const item = itemById(line.itemId);
-          const cost = Number(line.buyingPrice || item?.buyingPrice || 0) * Number(line.qty || 0);
-          const profit = Number(line.profit ?? (Number(line.total || 0) - cost));
+          const cost = Number(item?.buyingPrice ?? line.buyingPrice ?? 0) * Number(line.qty || 0);
+          const profit = Number(line.total || 0) - cost;
           return {
             Date: formatDate(sale.saleDate),
             Item: line.itemName || item?.name || line.itemId,
@@ -682,11 +695,11 @@ function buildReportRows(
       state.sales.filter((sale) => inRange(sale.saleDate) && matchesLocation(sale.locationId)).forEach((sale) => {
         sale.items.filter((line) => matchesItem(line.itemId) && matchesCategory(line.itemId)).forEach((line) => {
           const item = itemById(line.itemId);
-          const cost = Number(line.buyingPrice || item?.buyingPrice || 0) * Number(line.qty || 0);
+          const cost = Number(item?.buyingPrice ?? line.buyingPrice ?? 0) * Number(line.qty || 0);
           const entry = grouped.get(line.itemId) || { item: line.itemName || item?.name || line.itemId, qty: 0, amount: 0, profit: 0 };
           entry.qty += line.qty;
           entry.amount += line.total;
-          entry.profit += Number(line.profit ?? (Number(line.total || 0) - cost));
+          entry.profit += Number(line.total || 0) - cost;
           grouped.set(line.itemId, entry);
         });
       });
@@ -842,10 +855,17 @@ function buildReportRows(
       })));
     case "audit-security":
     case "user-activity":
-      return finalize([
-        ...state.sales.map((sale) => ({ Date: formatDate(sale.saleDate), User: "System", Module: "Sales", Action: `Created ${sale.id}`, Location: locationName(sale.locationId), _href: `/sales/${sale.id}` })),
-        ...state.purchases.map((purchase) => ({ Date: formatDate(purchase.purchaseDate), User: "System", Module: "Purchases", Action: `Created ${purchase.id}`, Location: locationName(purchase.locationId), _href: `/purchases/${purchase.id}` })),
-      ]);
+      return finalize((state.auditLogs || []).filter((log: any) =>
+        inRange(log.createdAt) &&
+        matchesLocation(log.locationId)
+      ).map((log: any) => ({
+        Date: formatDate(log.createdAt),
+        User: log.userName,
+        Module: log.module,
+        Action: log.action,
+        Record: [log.tableName, log.recordId].filter(Boolean).join(" / ") || "-",
+        Location: log.locationId ? locationName(log.locationId) : "Global",
+      })));
     default:
       return [];
   }

@@ -4,12 +4,15 @@ import React from "react";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, History, Search } from "lucide-react";
 import { useAppData } from "@/lib/client/useAppData";
 import { cn } from "@/lib/utils";
+import { paginateRows } from "@/lib/sales-utils";
 
 export default function MovementsPage() {
   const { inventoryMovements = [], locations = [], currentLocation } = useAppData();
   const [search, setSearch] = React.useState("");
   const [locationId, setLocationId] = React.useState("");
   const [type, setType] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(15);
 
   React.useEffect(() => {
     if (currentLocation) setLocationId(currentLocation.id);
@@ -28,6 +31,7 @@ export default function MovementsPage() {
       (!q || `${movement.itemName} ${movement.itemCode} ${movement.type} ${movement.locationName} ${movement.referenceId}`.toLowerCase().includes(q))
     );
   });
+  const pagedMovements = paginateRows<any>(filteredMovements, page, pageSize);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -45,13 +49,16 @@ export default function MovementsPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
               placeholder="Search movements..."
               className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-semibold outline-none focus:ring-1 focus:ring-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
             />
           </div>
-          <Select value={locationId} onChange={setLocationId} label="All Locations" options={locations.map((location: any) => ({ value: location.id, label: location.name }))} />
-          <Select value={type} onChange={setType} label="All Types" options={movementTypes.map((entry) => ({ value: entry, label: entry.replace(/_/g, " ") }))} />
+          <Select value={locationId} onChange={(value) => { setLocationId(value); setPage(1); }} label="All Locations" options={locations.map((location: any) => ({ value: location.id, label: location.name }))} />
+          <Select value={type} onChange={(value) => { setType(value); setPage(1); }} label="All Types" options={movementTypes.map((entry) => ({ value: entry, label: entry.replace(/_/g, " ") }))} />
         </div>
 
         <div className="overflow-x-auto">
@@ -68,7 +75,7 @@ export default function MovementsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-              {filteredMovements.map((movement: any) => {
+              {pagedMovements.rows.map((movement: any) => {
                 const isIn = Number(movement.quantity || 0) > 0;
                 return (
                   <tr key={movement.id} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
@@ -110,6 +117,25 @@ export default function MovementsPage() {
               ) : null}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+          <span>Page {pagedMovements.page} of {pagedMovements.totalPages} - {filteredMovements.length} movements</span>
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-black uppercase tracking-widest outline-none dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              {[10, 15, 25, 50].map((size) => (
+                <option key={size} value={size}>{size} / page</option>
+              ))}
+            </select>
+            <button type="button" disabled={pagedMovements.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
+            <button type="button" disabled={pagedMovements.page >= pagedMovements.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
+          </div>
         </div>
       </div>
     </div>

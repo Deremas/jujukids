@@ -207,26 +207,26 @@ export default function NewSalePage() {
     );
   };
 
-  const handleQuickAddCustomer = () => {
+  const handleQuickAddCustomer = async () => {
     if (newCustomer.name) {
-      const id = "C-" + Math.random().toString(36).substr(2, 4).toUpperCase();
-      const c = { ...newCustomer, id, balance: 0 };
-      addCustomer(c);
-      setSelectedCustomerId(id);
-      setShowCustomerModal(false);
-      setNewCustomer({ name: "", phone: "", email: "" });
+      try {
+        const result = await addCustomer(newCustomer);
+        setSelectedCustomerId(result.id);
+        setShowCustomerModal(false);
+        setNewCustomer({ name: "", phone: "", email: "" });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Customer could not be added.");
+      }
     }
   };
 
-  const handleQuickAddItem = () => {
+  const handleQuickAddItem = async () => {
     if (newItem.name && selectedLocationId && newItem.categoryId && newItem.unitId) {
-      const id = Math.random().toString(36).substr(2, 9);
       const generatedCode =
         newItem.code ||
         "ITEM-" + Math.random().toString(36).substr(2, 6).toUpperCase();
       const fullItem = {
         ...newItem,
-        id,
         stock: 0,
         status: "Active",
         code: generatedCode,
@@ -234,9 +234,13 @@ export default function NewSalePage() {
         categoryId: newItem.categoryId,
         unitId: newItem.unitId,
       };
-      addItem(fullItem);
-      setShowItemModal(false);
-      setNewItem({ name: "", code: "", categoryId: "", price: 0, unitId: "" });
+      try {
+        await addItem(fullItem);
+        setShowItemModal(false);
+        setNewItem({ name: "", code: "", categoryId: "", price: 0, unitId: "" });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Item could not be added.");
+      }
     }
   };
 

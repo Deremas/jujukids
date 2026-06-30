@@ -46,7 +46,7 @@ export default function BankAccountsPage() {
 
   const closeEditor = () => setEditingAccountId(null);
 
-  const saveAccount = () => {
+  const saveAccount = async () => {
     const displayName = formData.displayName.trim();
     const bankName = formData.bankName.trim();
     const accountNumber = formData.accountNumber.trim();
@@ -55,8 +55,7 @@ export default function BankAccountsPage() {
     if (!displayName || !bankName || !accountNumber) return;
 
     if (editingAccountId === "new") {
-      state.addBankAccount({
-        id: `BA-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+      await state.addBankAccount({
         displayName,
         bankName,
         accountNumber,
@@ -66,7 +65,7 @@ export default function BankAccountsPage() {
     } else {
       const account = state.bankAccounts.find((entry) => entry.id === editingAccountId);
       if (!account) return;
-      state.updateBankAccount({
+      await state.updateBankAccount({
         ...account,
         displayName,
         bankName,

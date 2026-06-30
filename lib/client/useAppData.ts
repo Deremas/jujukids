@@ -22,6 +22,7 @@ const initialAppData: AppData = {
   cashTransfers: [],
   transfers: [],
   inventoryMovements: [],
+  auditLogs: [],
   users: [],
   roles: [],
   permissions: [],

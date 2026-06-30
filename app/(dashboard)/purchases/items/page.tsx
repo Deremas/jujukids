@@ -6,23 +6,26 @@ import { Truck, Search, Package } from "lucide-react";
 
 import { useAppData } from "@/lib/client/useAppData";
 import { formatCurrency } from "@/lib/utils";
+import { paginateRows } from "@/lib/sales-utils";
 
 export default function PurchaseItemsPage() {
-  const { purchases, items, locations, suppliers, currentLocation } =
+  const { purchases, items, products = [], locations, suppliers, currentLocation } =
     useAppData();
   const [search, setSearch] = React.useState("");
   const [locationId, setLocationId] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(15);
 
   React.useEffect(() => {
     if (currentLocation?.id) setLocationId(currentLocation.id);
   }, [currentLocation?.id]);
 
   const itemName = (id: string) =>
-    items.find((item: any) => item.id === id)?.name || id;
+    products.find((item: any) => item.id === id)?.name || items.find((item: any) => item.id === id)?.name || id;
   const itemCode = (id: string) =>
-    items.find((item: any) => item.id === id)?.code || "";
+    products.find((item: any) => item.id === id)?.code || items.find((item: any) => item.id === id)?.code || "";
   const itemUnit = (id: string) =>
-    items.find((item: any) => item.id === id)?.unit || "-";
+    products.find((item: any) => item.id === id)?.unit || items.find((item: any) => item.id === id)?.unit || "-";
   const supplierName = (id?: string | null) =>
     suppliers.find((s: any) => s.id === id)?.name || "No Supplier";
   const locationName = (id: string) =>
@@ -48,6 +51,7 @@ export default function PurchaseItemsPage() {
         `${row.purchase.id} ${row.item} ${row.code} ${row.supplier} ${row.location}`.toLowerCase();
       return haystack.includes(search.toLowerCase());
     });
+  const pagedRows = paginateRows<any>(rows, page, pageSize);
 
   // Summary stats
   const totalItems = rows.length;
@@ -78,14 +82,20 @@ export default function PurchaseItemsPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
               placeholder="Search purchased items..."
               className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-900 sm:w-72"
             />
           </div>
           <select
             value={locationId}
-            onChange={(event) => setLocationId(event.target.value)}
+            onChange={(event) => {
+              setLocationId(event.target.value);
+              setPage(1);
+            }}
             className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black uppercase tracking-widest text-slate-600 outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-900"
           >
             <option value="">All Locations</option>
@@ -154,7 +164,7 @@ export default function PurchaseItemsPage() {
                   </td>
                 </tr>
               ) : (
-                rows.map((row: any) => (
+                pagedRows.rows.map((row: any) => (
                   <tr
                     key={`${row.purchase.id}-${row.line.id}`}
                     className="hover:bg-slate-50 dark:hover:bg-zinc-800/30 transition-colors"
@@ -175,7 +185,7 @@ export default function PurchaseItemsPage() {
                             {row.item}
                           </p>
                           <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
-                            {row.code || row.line.itemId} · {row.unit}
+                            {row.code || row.line.itemId} - {row.unit}
                           </p>
                         </div>
                       </div>
@@ -215,6 +225,25 @@ export default function PurchaseItemsPage() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+          <span>Page {pagedRows.page} of {pagedRows.totalPages} - {rows.length} purchased items</span>
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-black uppercase tracking-widest outline-none dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              {[10, 15, 25, 50].map((size) => (
+                <option key={size} value={size}>{size} / page</option>
+              ))}
+            </select>
+            <button type="button" disabled={pagedRows.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
+            <button type="button" disabled={pagedRows.page >= pagedRows.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
+          </div>
         </div>
       </div>
     </div>

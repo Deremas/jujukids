@@ -15,9 +15,9 @@ rm -rf .next generated node_modules/.cache
 echo "Generating Prisma Client..."
 node scripts/run-prisma.mjs generate --schema=prisma/schema.prisma
 
-# 4. Push database schema. Do not auto-accept data loss in deployment.
-echo "Pushing database schema..."
-node scripts/run-prisma.mjs db push --schema=prisma/schema.prisma
+# 4. Database schema changes are intentionally not applied automatically.
+# Production migrations must be reviewed and run separately before deployment.
+echo "Skipping database schema changes..."
 
 # 5. Build Next.js application
 echo "Building Next.js app..."

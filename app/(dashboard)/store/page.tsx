@@ -35,7 +35,7 @@ export function StockView({
   const [stockEntry, setStockEntry] = React.useState({ quantity: "", buyingPrice: "", sellingPrice: "", note: "" });
   const [stockEntryError, setStockEntryError] = React.useState("");
   const [priceEditingItem, setPriceEditingItem] = React.useState<any>(null);
-  const [priceValue, setPriceValue] = React.useState("");
+  const [priceValues, setPriceValues] = React.useState({ buyingPrice: "", sellingPrice: "" });
   const [priceError, setPriceError] = React.useState("");
   const canAdjustStock = user?.role === "Super Admin";
   const canEditPrice = user?.role === "Super Admin" || user?.permissions?.includes("inventory.items.update");
@@ -158,7 +158,10 @@ export function StockView({
 
   const openPriceEditor = (item: any) => {
     setPriceEditingItem(item);
-    setPriceValue(String(Number(item.sellingPrice || item.price || 0)));
+    setPriceValues({
+      buyingPrice: String(Number(item.buyingPrice || 0)),
+      sellingPrice: String(Number(item.sellingPrice || item.price || 0)),
+    });
     setPriceError("");
   };
 
@@ -170,11 +173,12 @@ export function StockView({
       await updateItemPrice({
         itemId: priceEditingItem.id,
         locationId: priceEditingItem.locationId,
-        sellingPrice: Number(priceValue),
+        buyingPrice: Number(priceValues.buyingPrice),
+        sellingPrice: Number(priceValues.sellingPrice),
       });
       setPriceEditingItem(null);
     } catch (error) {
-      setPriceError(error instanceof Error ? error.message : "Selling price update failed.");
+      setPriceError(error instanceof Error ? error.message : "Price update failed.");
     }
   };
 
@@ -244,7 +248,21 @@ export function StockView({
                     </td>
                     <td className="px-6 py-4 text-xs font-bold text-slate-500">{location?.name || "-"}</td>
                     <td className="px-6 py-4 text-xs font-bold text-slate-500">{item.category}</td>
-                    <td className="px-6 py-4 text-right text-xs font-bold text-slate-900 dark:text-zinc-100">{formatCurrency(Number(item.buyingPrice || 0))}</td>
+                    <td className="px-6 py-4 text-right text-xs font-bold text-slate-900 dark:text-zinc-100">
+                      <div className="flex items-center justify-end gap-2">
+                        <span>{formatCurrency(Number(item.buyingPrice || 0))}</span>
+                        {canEditPrice && (
+                          <button
+                            type="button"
+                            onClick={() => openPriceEditor(item)}
+                            className="rounded-lg border border-slate-200 p-1.5 text-slate-400 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-800"
+                            title="Edit buying and selling prices"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-right text-xs font-bold text-slate-900 dark:text-zinc-100">
                       <div className="flex items-center justify-end gap-2">
                         <span>{formatCurrency(Number(item.sellingPrice || item.price || 0))}</span>
@@ -253,7 +271,7 @@ export function StockView({
                             type="button"
                             onClick={() => openPriceEditor(item)}
                             className="rounded-lg border border-slate-200 p-1.5 text-slate-400 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-zinc-800"
-                            title="Edit selling price"
+                            title="Edit buying and selling prices"
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </button>
@@ -385,8 +403,12 @@ export function StockView({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-xl bg-slate-50 p-4 dark:bg-zinc-950">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Qty</p>
+                  <p className="mt-2 text-xl font-black text-slate-950 dark:text-white">{Number(stockEntryItem.stock || 0).toLocaleString()}</p>
+                </div>
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Qty</span>
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Qty To Add</span>
                   <input
                     type="number"
                     min="0.01"
@@ -409,6 +431,8 @@ export function StockView({
                     required
                   />
                 </label>
+              </div>
+              <div className="mt-4">
                 <label className="block">
                   <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Selling Price</span>
                   <input
@@ -454,7 +478,7 @@ export function StockView({
             <form onSubmit={submitPriceUpdate} className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-black text-slate-950 dark:text-white">Edit Selling Price</h2>
+                  <h2 className="text-lg font-black text-slate-950 dark:text-white">Edit Stock Prices</h2>
                   <p className="mt-1 text-xs font-semibold text-slate-500">
                     {priceEditingItem.name} at {locations.find((location: any) => location.id === priceEditingItem.locationId)?.name}
                   </p>
@@ -464,20 +488,34 @@ export function StockView({
                 </button>
               </div>
 
-              <label className="block">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">New Selling Price</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={priceValue}
-                  onChange={(event) => setPriceValue(event.target.value)}
-                  className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
-                  required
-                />
-              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Buying Price</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={priceValues.buyingPrice}
+                    onChange={(event) => setPriceValues((current) => ({ ...current, buyingPrice: event.target.value }))}
+                    className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Selling Price</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={priceValues.sellingPrice}
+                    onChange={(event) => setPriceValues((current) => ({ ...current, sellingPrice: event.target.value }))}
+                    className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black outline-none focus:border-indigo-500 dark:border-zinc-800 dark:bg-zinc-950"
+                    required
+                  />
+                </label>
+              </div>
               <p className="mt-2 text-[11px] font-semibold text-slate-500">
-                This updates the item default price and open stock batches for this location, so new sales use the new price.
+                This updates item defaults and open stock batches at this location. It does not create a financial transaction.
               </p>
 
               {priceError && <p className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-xs font-bold text-rose-600 dark:bg-rose-950/30">{priceError}</p>}

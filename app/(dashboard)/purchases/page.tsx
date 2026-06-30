@@ -16,11 +16,14 @@ import Link from "next/link";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useAppData } from "@/lib/client/useAppData";
 import { motion, AnimatePresence } from "motion/react";
+import { paginateRows } from "@/lib/sales-utils";
 
 export default function PurchasesPage() {
   const { purchases, suppliers, currentLocation, locations, deletePurchase } =
     useAppData();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const [viewPurchase, setViewPurchase] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -33,6 +36,7 @@ export default function PurchasesPage() {
       return matchesSearch && p.locationId === currentLocation.id;
     return matchesSearch;
   });
+  const pagedPurchases = paginateRows<any>(filteredPurchases, page, pageSize);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 p-4 md:p-6 pb-20 font-bold">
@@ -66,7 +70,10 @@ export default function PurchasesPage() {
               type="text"
               placeholder="Search by ID or supplier..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:ring-1 focus:ring-indigo-500 text-xs transition-all font-bold"
             />
           </div>
@@ -112,7 +119,7 @@ export default function PurchasesPage() {
                   </td>
                 </tr>
               ) : (
-                filteredPurchases.map((p) => {
+                pagedPurchases.rows.map((p) => {
                   const supplier = suppliers.find((s) => s.id === p.supplierId);
                   return (
                     <tr
@@ -181,6 +188,25 @@ export default function PurchasesPage() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 dark:border-zinc-800">
+          <span>Page {pagedPurchases.page} of {pagedPurchases.totalPages} - {filteredPurchases.length} purchases</span>
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-black uppercase tracking-widest outline-none dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              {[10, 15, 25, 50].map((size) => (
+                <option key={size} value={size}>{size} / page</option>
+              ))}
+            </select>
+            <button type="button" disabled={pagedPurchases.page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Prev</button>
+            <button type="button" disabled={pagedPurchases.page >= pagedPurchases.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-800">Next</button>
+          </div>
         </div>
       </div>
 

@@ -90,7 +90,7 @@ export default function Dashboard() {
     })),
   ]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+    .slice(0, 7);
 
   const quickActions = [
     {
@@ -167,15 +167,9 @@ export default function Dashboard() {
             title="TODAY'S SALES"
             value={formatCurrency(totalTodaySales)}
             change={`${todaySales.length} txns`}
-            subtitle="AVG SALE"
             icon={ShoppingCart}
             action="VIEW SALES"
             actionHref="/sales"
-            avg={
-              todaySales.length
-                ? formatCurrency(totalTodaySales / todaySales.length)
-                : "0"
-            }
           />
         )}
         {can("reports.view") && can("sales.view") && (
@@ -183,16 +177,10 @@ export default function Dashboard() {
             title="TODAY'S PROFIT"
             value={formatCurrency(totalTodayProfit)}
             change={`${todaySales.length} txns`}
-            subtitle="AVG PROFIT"
             icon={TrendingUp}
             action="VIEW ANALYSIS"
             actionHref="/reports/sales"
             trend="up"
-            avg={
-              todaySales.length
-                ? formatCurrency(totalTodayProfit / todaySales.length)
-                : formatCurrency(0)
-            }
           />
         )}
         {(can("inventory.stock.view") || can("inventory.items.view")) && (
@@ -200,11 +188,9 @@ export default function Dashboard() {
             title="ACTIVE INVENTORY"
             value={totalProducts.toString()}
             change={`${locationItems.length} items`}
-            subtitle="IN STOCK"
             icon={Package}
             action="VIEW PRODUCTS"
             actionHref="/items"
-            avg={locationItems.reduce((acc, i) => acc + i.stock, 0).toString()}
           />
         )}
       </div>
@@ -443,12 +429,10 @@ function SmallStatCard({
   title,
   value,
   change,
-  subtitle,
   icon: Icon,
   action,
   actionHref,
   trend,
-  avg,
 }: any) {
   return (
     <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 rounded-[2rem] shadow-sm hover:shadow-xl transition-all group">
@@ -464,21 +448,13 @@ function SmallStatCard({
         {value}
       </h2>
 
-      <div className="grid grid-cols-2 mt-6 gap-4 border-t border-slate-50 dark:border-zinc-800 pt-6">
+      <div className="mt-6 border-t border-slate-50 dark:border-zinc-800 pt-6">
         <div>
           <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest">
             {change.split(" ")[1] || "TXNS"}
           </p>
           <p className="text-xs font-black text-slate-900 dark:text-white mt-0.5">
             {change.split(" ")[0]}
-          </p>
-        </div>
-        <div className="border-l border-slate-50 dark:border-zinc-800 pl-4">
-          <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest">
-            {subtitle}
-          </p>
-          <p className="text-xs font-black text-slate-900 dark:text-white mt-0.5">
-            {avg}
           </p>
         </div>
       </div>

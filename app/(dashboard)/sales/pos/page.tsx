@@ -58,28 +58,29 @@ export default function PosPage() {
     }));
   };
 
-  const handleQuickAddCustomer = () => {
+  const handleQuickAddCustomer = async () => {
     const name = newCustomer.name.trim();
     if (!name) {
       toast.error("Customer name is required.");
       return;
     }
 
-    const id = "C-" + Math.random().toString(36).substr(2, 4).toUpperCase();
-    addCustomer({
-      id,
-      name,
-      phone: newCustomer.phone.trim() || "-",
-      email: newCustomer.email.trim() || "-",
-      balance: 0,
-    });
-    setSelectedCustomerId(id);
-    setNewCustomer({ name: "", phone: "", email: "" });
-    setShowCustomerModal(false);
-    toast.success("Customer added");
+    try {
+      const result = await addCustomer({
+        name,
+        phone: newCustomer.phone.trim() || "-",
+        email: newCustomer.email.trim() || "-",
+      });
+      setSelectedCustomerId(result.id);
+      setNewCustomer({ name: "", phone: "", email: "" });
+      setShowCustomerModal(false);
+      toast.success("Customer added");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Customer could not be added.");
+    }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0 || !currentLocation) return;
     if (!selectedCustomerId) {
       toast.error("Please select a customer.");
@@ -122,7 +123,6 @@ export default function PosPage() {
         : 0;
 
     const sale = {
-      id: "S-" + Math.random().toString(36).substr(2, 6).toUpperCase(),
       customerId: selectedCustomerId,
       locationId: currentLocation.id,
       saleDate: new Date(),
@@ -135,7 +135,6 @@ export default function PosPage() {
       paymentMethod,
       bankAccountId: bankAmount > 0 ? selectedBankId : undefined,
       items: cart.map(item => ({
-        id: Math.random().toString(36).substr(2, 9),
         itemId: item.id,
         qty: item.quantity,
         price: item.price,
@@ -144,14 +143,18 @@ export default function PosPage() {
       }))
     };
 
-    addSale(sale);
-    setCart([]);
-    setCashPaid(0);
-    setBankPaid(0);
-    toast.success({
-      title: "Sale completed",
-      description: `${formatCurrency(total)} sale recorded successfully.`,
-    });
+    try {
+      await addSale(sale);
+      setCart([]);
+      setCashPaid(0);
+      setBankPaid(0);
+      toast.success({
+        title: "Sale completed",
+        description: `${formatCurrency(total)} sale recorded successfully.`,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Sale could not be completed.");
+    }
   };
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);

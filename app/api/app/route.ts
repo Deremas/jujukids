@@ -151,6 +151,7 @@ export async function GET() {
     bankTransactions,
     transfers,
     inventoryMovements,
+    auditLogs,
   ] = await Promise.all([
     prisma.location.findMany({
       where: { isActive: true, ...(locationScope ? { id: locationScope } : {}) },
@@ -217,6 +218,16 @@ export async function GET() {
       include: { item: { include: { category: true, unit: true } }, location: true },
       orderBy: { createdAt: "desc" },
     }),
+    hasPermission(currentUser, "reports.audit.view")
+      ? prisma.auditLog.findMany({
+          where: locationScope
+            ? { OR: [{ locationId: locationScope }, { locationId: null }] }
+            : {},
+          include: { user: true },
+          orderBy: { createdAt: "desc" },
+          take: 1000,
+        })
+      : Promise.resolve([]),
   ]);
 
   const saleBankAccountBySaleId = new Map<string, { id: string; displayName: string; bankName: string | null }>();
@@ -608,6 +619,17 @@ export async function GET() {
       note: movement.note || "",
       createdAt: movement.createdAt,
     })),
+    auditLogs: auditLogs.map((log) => ({
+      id: log.id,
+      userId: log.userId,
+      userName: [log.user.firstName, log.user.lastName].filter(Boolean).join(" ") || log.user.username,
+      locationId: log.locationId || "",
+      action: log.action,
+      module: log.module,
+      tableName: log.tableName || "",
+      recordId: log.recordId || "",
+      createdAt: log.createdAt,
+    })),
     users: canViewUsers ? users.map((user) => toAppUser(user, locations)) : [],
     roles: canViewRoles ? roles.map((role) => ({
       id: role.id,
@@ -639,6 +661,8 @@ export async function GET() {
       lowStockThreshold: Number(settingValue.lowStockThreshold || 0),
       enableNotifications: settingValue.enableNotifications === "true",
       enableEmailAlerts: settingValue.enableEmailAlerts === "true",
+      passwordStrength: settingValue.passwordStrength || "Medium",
+      require2FA: settingValue.require2FA === "true",
     } : {},
   });
 }
@@ -1566,9 +1590,16 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "updateItemPrice") {
-    const price = Number(payload.sellingPrice);
-    if (!payload.itemId || !Number.isFinite(price) || price < 0) {
-      return NextResponse.json({ ok: false, error: "A valid item and non-negative selling price are required." }, { status: 400 });
+    const buyingPrice = Number(payload.buyingPrice);
+    const sellingPrice = Number(payload.sellingPrice);
+    if (
+      !payload.itemId
+      || !Number.isFinite(buyingPrice)
+      || buyingPrice < 0
+      || !Number.isFinite(sellingPrice)
+      || sellingPrice < 0
+    ) {
+      return NextResponse.json({ ok: false, error: "Valid non-negative buying and selling prices are required." }, { status: 400 });
     }
 
     const updatedOpenBatches = await prisma.$transaction(async (tx) => {
@@ -1581,12 +1612,15 @@ export async function POST(request: NextRequest) {
 
       await tx.item.update({
         where: { id: payload.itemId },
-        data: { defaultSellingPrice: price },
+        data: {
+          defaultBuyingPrice: buyingPrice,
+          defaultSellingPrice: sellingPrice,
+        },
       });
 
       const updatedBatches = await tx.inventoryBatch.updateMany({
         where: batchWhere,
-        data: { sellingPrice: price },
+        data: { buyingPrice, sellingPrice },
       });
 
       await tx.auditLog.create({
@@ -1597,9 +1631,13 @@ export async function POST(request: NextRequest) {
           module: "Inventory",
           tableName: "Item",
           recordId: item.id,
-          oldData: { defaultSellingPrice: item.defaultSellingPrice },
+          oldData: {
+            defaultBuyingPrice: item.defaultBuyingPrice,
+            defaultSellingPrice: item.defaultSellingPrice,
+          },
           newData: {
-            defaultSellingPrice: price,
+            defaultBuyingPrice: buyingPrice,
+            defaultSellingPrice: sellingPrice,
             updatedOpenBatches: updatedBatches.count,
             locationId: payload.locationId || null,
           },
