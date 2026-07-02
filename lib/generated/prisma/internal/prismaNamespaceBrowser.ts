@@ -360,6 +360,7 @@ export const SaleItemScalarFieldEnum = {
   itemId: 'itemId',
   inventoryBatchId: 'inventoryBatchId',
   quantity: 'quantity',
+  buyingPrice: 'buyingPrice',
   sellingPrice: 'sellingPrice',
   discount: 'discount',
   totalAmount: 'totalAmount',

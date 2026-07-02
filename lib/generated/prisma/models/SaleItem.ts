@@ -28,6 +28,7 @@ export type AggregateSaleItem = {
 
 export type SaleItemAvgAggregateOutputType = {
   quantity: number | null
+  buyingPrice: number | null
   sellingPrice: number | null
   discount: number | null
   totalAmount: number | null
@@ -35,6 +36,7 @@ export type SaleItemAvgAggregateOutputType = {
 
 export type SaleItemSumAggregateOutputType = {
   quantity: number | null
+  buyingPrice: number | null
   sellingPrice: number | null
   discount: number | null
   totalAmount: number | null
@@ -46,6 +48,7 @@ export type SaleItemMinAggregateOutputType = {
   itemId: string | null
   inventoryBatchId: string | null
   quantity: number | null
+  buyingPrice: number | null
   sellingPrice: number | null
   discount: number | null
   totalAmount: number | null
@@ -58,6 +61,7 @@ export type SaleItemMaxAggregateOutputType = {
   itemId: string | null
   inventoryBatchId: string | null
   quantity: number | null
+  buyingPrice: number | null
   sellingPrice: number | null
   discount: number | null
   totalAmount: number | null
@@ -70,6 +74,7 @@ export type SaleItemCountAggregateOutputType = {
   itemId: number
   inventoryBatchId: number
   quantity: number
+  buyingPrice: number
   sellingPrice: number
   discount: number
   totalAmount: number
@@ -80,6 +85,7 @@ export type SaleItemCountAggregateOutputType = {
 
 export type SaleItemAvgAggregateInputType = {
   quantity?: true
+  buyingPrice?: true
   sellingPrice?: true
   discount?: true
   totalAmount?: true
@@ -87,6 +93,7 @@ export type SaleItemAvgAggregateInputType = {
 
 export type SaleItemSumAggregateInputType = {
   quantity?: true
+  buyingPrice?: true
   sellingPrice?: true
   discount?: true
   totalAmount?: true
@@ -98,6 +105,7 @@ export type SaleItemMinAggregateInputType = {
   itemId?: true
   inventoryBatchId?: true
   quantity?: true
+  buyingPrice?: true
   sellingPrice?: true
   discount?: true
   totalAmount?: true
@@ -110,6 +118,7 @@ export type SaleItemMaxAggregateInputType = {
   itemId?: true
   inventoryBatchId?: true
   quantity?: true
+  buyingPrice?: true
   sellingPrice?: true
   discount?: true
   totalAmount?: true
@@ -122,6 +131,7 @@ export type SaleItemCountAggregateInputType = {
   itemId?: true
   inventoryBatchId?: true
   quantity?: true
+  buyingPrice?: true
   sellingPrice?: true
   discount?: true
   totalAmount?: true
@@ -221,6 +231,7 @@ export type SaleItemGroupByOutputType = {
   itemId: string
   inventoryBatchId: string
   quantity: number
+  buyingPrice: number
   sellingPrice: number
   discount: number
   totalAmount: number
@@ -256,6 +267,7 @@ export type SaleItemWhereInput = {
   itemId?: Prisma.StringFilter<"SaleItem"> | string
   inventoryBatchId?: Prisma.StringFilter<"SaleItem"> | string
   quantity?: Prisma.FloatFilter<"SaleItem"> | number
+  buyingPrice?: Prisma.FloatFilter<"SaleItem"> | number
   sellingPrice?: Prisma.FloatFilter<"SaleItem"> | number
   discount?: Prisma.FloatFilter<"SaleItem"> | number
   totalAmount?: Prisma.FloatFilter<"SaleItem"> | number
@@ -271,6 +283,7 @@ export type SaleItemOrderByWithRelationInput = {
   itemId?: Prisma.SortOrder
   inventoryBatchId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
+  buyingPrice?: Prisma.SortOrder
   sellingPrice?: Prisma.SortOrder
   discount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
@@ -289,6 +302,7 @@ export type SaleItemWhereUniqueInput = Prisma.AtLeast<{
   itemId?: Prisma.StringFilter<"SaleItem"> | string
   inventoryBatchId?: Prisma.StringFilter<"SaleItem"> | string
   quantity?: Prisma.FloatFilter<"SaleItem"> | number
+  buyingPrice?: Prisma.FloatFilter<"SaleItem"> | number
   sellingPrice?: Prisma.FloatFilter<"SaleItem"> | number
   discount?: Prisma.FloatFilter<"SaleItem"> | number
   totalAmount?: Prisma.FloatFilter<"SaleItem"> | number
@@ -304,6 +318,7 @@ export type SaleItemOrderByWithAggregationInput = {
   itemId?: Prisma.SortOrder
   inventoryBatchId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
+  buyingPrice?: Prisma.SortOrder
   sellingPrice?: Prisma.SortOrder
   discount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
@@ -324,6 +339,7 @@ export type SaleItemScalarWhereWithAggregatesInput = {
   itemId?: Prisma.StringWithAggregatesFilter<"SaleItem"> | string
   inventoryBatchId?: Prisma.StringWithAggregatesFilter<"SaleItem"> | string
   quantity?: Prisma.FloatWithAggregatesFilter<"SaleItem"> | number
+  buyingPrice?: Prisma.FloatWithAggregatesFilter<"SaleItem"> | number
   sellingPrice?: Prisma.FloatWithAggregatesFilter<"SaleItem"> | number
   discount?: Prisma.FloatWithAggregatesFilter<"SaleItem"> | number
   totalAmount?: Prisma.FloatWithAggregatesFilter<"SaleItem"> | number
@@ -333,6 +349,7 @@ export type SaleItemScalarWhereWithAggregatesInput = {
 export type SaleItemCreateInput = {
   id?: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -348,6 +365,7 @@ export type SaleItemUncheckedCreateInput = {
   itemId: string
   inventoryBatchId: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -357,6 +375,7 @@ export type SaleItemUncheckedCreateInput = {
 export type SaleItemUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -372,6 +391,7 @@ export type SaleItemUncheckedUpdateInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   inventoryBatchId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -384,6 +404,7 @@ export type SaleItemCreateManyInput = {
   itemId: string
   inventoryBatchId: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -393,6 +414,7 @@ export type SaleItemCreateManyInput = {
 export type SaleItemUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -405,6 +427,7 @@ export type SaleItemUncheckedUpdateManyInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   inventoryBatchId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -427,6 +450,7 @@ export type SaleItemCountOrderByAggregateInput = {
   itemId?: Prisma.SortOrder
   inventoryBatchId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
+  buyingPrice?: Prisma.SortOrder
   sellingPrice?: Prisma.SortOrder
   discount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
@@ -435,6 +459,7 @@ export type SaleItemCountOrderByAggregateInput = {
 
 export type SaleItemAvgOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
+  buyingPrice?: Prisma.SortOrder
   sellingPrice?: Prisma.SortOrder
   discount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
@@ -446,6 +471,7 @@ export type SaleItemMaxOrderByAggregateInput = {
   itemId?: Prisma.SortOrder
   inventoryBatchId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
+  buyingPrice?: Prisma.SortOrder
   sellingPrice?: Prisma.SortOrder
   discount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
@@ -458,6 +484,7 @@ export type SaleItemMinOrderByAggregateInput = {
   itemId?: Prisma.SortOrder
   inventoryBatchId?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
+  buyingPrice?: Prisma.SortOrder
   sellingPrice?: Prisma.SortOrder
   discount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
@@ -466,6 +493,7 @@ export type SaleItemMinOrderByAggregateInput = {
 
 export type SaleItemSumOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
+  buyingPrice?: Prisma.SortOrder
   sellingPrice?: Prisma.SortOrder
   discount?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
@@ -600,6 +628,7 @@ export type SaleItemUncheckedUpdateManyWithoutSaleNestedInput = {
 export type SaleItemCreateWithoutItemInput = {
   id?: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -613,6 +642,7 @@ export type SaleItemUncheckedCreateWithoutItemInput = {
   saleId: string
   inventoryBatchId: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -654,6 +684,7 @@ export type SaleItemScalarWhereInput = {
   itemId?: Prisma.StringFilter<"SaleItem"> | string
   inventoryBatchId?: Prisma.StringFilter<"SaleItem"> | string
   quantity?: Prisma.FloatFilter<"SaleItem"> | number
+  buyingPrice?: Prisma.FloatFilter<"SaleItem"> | number
   sellingPrice?: Prisma.FloatFilter<"SaleItem"> | number
   discount?: Prisma.FloatFilter<"SaleItem"> | number
   totalAmount?: Prisma.FloatFilter<"SaleItem"> | number
@@ -663,6 +694,7 @@ export type SaleItemScalarWhereInput = {
 export type SaleItemCreateWithoutInventoryBatchInput = {
   id?: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -676,6 +708,7 @@ export type SaleItemUncheckedCreateWithoutInventoryBatchInput = {
   saleId: string
   itemId: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -711,6 +744,7 @@ export type SaleItemUpdateManyWithWhereWithoutInventoryBatchInput = {
 export type SaleItemCreateWithoutSaleInput = {
   id?: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -724,6 +758,7 @@ export type SaleItemUncheckedCreateWithoutSaleInput = {
   itemId: string
   inventoryBatchId: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -761,6 +796,7 @@ export type SaleItemCreateManyItemInput = {
   saleId: string
   inventoryBatchId: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -770,6 +806,7 @@ export type SaleItemCreateManyItemInput = {
 export type SaleItemUpdateWithoutItemInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -783,6 +820,7 @@ export type SaleItemUncheckedUpdateWithoutItemInput = {
   saleId?: Prisma.StringFieldUpdateOperationsInput | string
   inventoryBatchId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -794,6 +832,7 @@ export type SaleItemUncheckedUpdateManyWithoutItemInput = {
   saleId?: Prisma.StringFieldUpdateOperationsInput | string
   inventoryBatchId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -805,6 +844,7 @@ export type SaleItemCreateManyInventoryBatchInput = {
   saleId: string
   itemId: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -814,6 +854,7 @@ export type SaleItemCreateManyInventoryBatchInput = {
 export type SaleItemUpdateWithoutInventoryBatchInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -827,6 +868,7 @@ export type SaleItemUncheckedUpdateWithoutInventoryBatchInput = {
   saleId?: Prisma.StringFieldUpdateOperationsInput | string
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -838,6 +880,7 @@ export type SaleItemUncheckedUpdateManyWithoutInventoryBatchInput = {
   saleId?: Prisma.StringFieldUpdateOperationsInput | string
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -849,6 +892,7 @@ export type SaleItemCreateManySaleInput = {
   itemId: string
   inventoryBatchId: string
   quantity: number
+  buyingPrice?: number
   sellingPrice: number
   discount?: number
   totalAmount: number
@@ -858,6 +902,7 @@ export type SaleItemCreateManySaleInput = {
 export type SaleItemUpdateWithoutSaleInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -871,6 +916,7 @@ export type SaleItemUncheckedUpdateWithoutSaleInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   inventoryBatchId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -882,6 +928,7 @@ export type SaleItemUncheckedUpdateManyWithoutSaleInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   inventoryBatchId?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.FloatFieldUpdateOperationsInput | number
+  buyingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   sellingPrice?: Prisma.FloatFieldUpdateOperationsInput | number
   discount?: Prisma.FloatFieldUpdateOperationsInput | number
   totalAmount?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -896,6 +943,7 @@ export type SaleItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   itemId?: boolean
   inventoryBatchId?: boolean
   quantity?: boolean
+  buyingPrice?: boolean
   sellingPrice?: boolean
   discount?: boolean
   totalAmount?: boolean
@@ -911,6 +959,7 @@ export type SaleItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   itemId?: boolean
   inventoryBatchId?: boolean
   quantity?: boolean
+  buyingPrice?: boolean
   sellingPrice?: boolean
   discount?: boolean
   totalAmount?: boolean
@@ -926,6 +975,7 @@ export type SaleItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   itemId?: boolean
   inventoryBatchId?: boolean
   quantity?: boolean
+  buyingPrice?: boolean
   sellingPrice?: boolean
   discount?: boolean
   totalAmount?: boolean
@@ -941,13 +991,14 @@ export type SaleItemSelectScalar = {
   itemId?: boolean
   inventoryBatchId?: boolean
   quantity?: boolean
+  buyingPrice?: boolean
   sellingPrice?: boolean
   discount?: boolean
   totalAmount?: boolean
   createdAt?: boolean
 }
 
-export type SaleItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "saleId" | "itemId" | "inventoryBatchId" | "quantity" | "sellingPrice" | "discount" | "totalAmount" | "createdAt", ExtArgs["result"]["saleItem"]>
+export type SaleItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "saleId" | "itemId" | "inventoryBatchId" | "quantity" | "buyingPrice" | "sellingPrice" | "discount" | "totalAmount" | "createdAt", ExtArgs["result"]["saleItem"]>
 export type SaleItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sale?: boolean | Prisma.SaleDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
@@ -977,6 +1028,7 @@ export type $SaleItemPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     itemId: string
     inventoryBatchId: string
     quantity: number
+    buyingPrice: number
     sellingPrice: number
     discount: number
     totalAmount: number
@@ -1412,6 +1464,7 @@ export interface SaleItemFieldRefs {
   readonly itemId: Prisma.FieldRef<"SaleItem", 'String'>
   readonly inventoryBatchId: Prisma.FieldRef<"SaleItem", 'String'>
   readonly quantity: Prisma.FieldRef<"SaleItem", 'Float'>
+  readonly buyingPrice: Prisma.FieldRef<"SaleItem", 'Float'>
   readonly sellingPrice: Prisma.FieldRef<"SaleItem", 'Float'>
   readonly discount: Prisma.FieldRef<"SaleItem", 'Float'>
   readonly totalAmount: Prisma.FieldRef<"SaleItem", 'Float'>

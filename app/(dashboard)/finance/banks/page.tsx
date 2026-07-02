@@ -26,13 +26,14 @@ export default function BankAccountsPage() {
     ? state.bankAccounts.find((account) => account.id === selectedAccountId) || null
     : null;
   const selectedTransactions = selectedAccount ? transactionsFor(selectedAccount.id) : [];
-  const cashAccount = state.bankAccounts.find((account) => account.accountType === "CASH");
   const cashLocationBalances = state.locations.map((location) => ({
     ...location,
     balance: calculateLocationCashBalance(state, location.id),
   }));
   const cashLocationTotal = cashLocationBalances.reduce((sum, location) => sum + location.balance, 0);
-  const globalCashBalance = cashAccount ? balanceFor(cashAccount.id, cashAccount.currentBalance) : cashLocationTotal;
+  const globalCashBalance = cashLocationTotal;
+  const displayedBalanceFor = (account: typeof state.bankAccounts[number]) =>
+    account.accountType === "CASH" ? globalCashBalance : balanceFor(account.id, account.currentBalance);
 
   const openEditor = (account?: typeof state.bankAccounts[number]) => {
     setEditingAccountId(account?.id || "new");
@@ -130,7 +131,7 @@ export default function BankAccountsPage() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {state.bankAccounts.map((account) => {
-          const currentBalance = balanceFor(account.id, account.currentBalance);
+          const currentBalance = displayedBalanceFor(account);
           const transactionCount = transactionsFor(account.id).length;
           const canDelete = account.accountType !== "CASH" && transactionCount === 0;
 
@@ -210,7 +211,7 @@ export default function BankAccountsPage() {
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
-              <DetailStat label="Balance" value={formatCurrency(balanceFor(selectedAccount.id, selectedAccount.currentBalance))} />
+              <DetailStat label="Balance" value={formatCurrency(displayedBalanceFor(selectedAccount))} />
               <DetailStat label="Transactions" value={String(selectedTransactions.length)} />
             </div>
 

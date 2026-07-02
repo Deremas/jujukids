@@ -294,6 +294,7 @@ model SaleItem {
   itemId           String
   inventoryBatchId String
   quantity         Float
+  buyingPrice      Float    @default(0)
   sellingPrice     Float
   discount         Float    @default(0)
   totalAmount      Float

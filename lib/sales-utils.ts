@@ -1,5 +1,12 @@
+export function saleCost(sale: { items?: any[] }) {
+  return (sale.items || []).reduce((sum, line) => sum + (Number(line.buyingPrice || 0) * Number(line.qty || 0)), 0);
+}
+
 export function saleProfit(sale: { items?: any[] }) {
-  return (sale.items || []).reduce((sum, line) => sum + Number(line.profit || 0), 0);
+  return (sale.items || []).reduce((sum, line) => {
+    if (line.profit !== undefined && line.profit !== null) return sum + Number(line.profit || 0);
+    return sum + (Number(line.total || 0) - (Number(line.buyingPrice || 0) * Number(line.qty || 0)));
+  }, 0);
 }
 
 export function saleItemSummary(sale: { items?: any[] }, products: any[] = [], items: any[] = []) {

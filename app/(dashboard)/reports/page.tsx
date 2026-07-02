@@ -663,7 +663,7 @@ function buildReportRows(
       ).flatMap((sale) =>
         sale.items.filter((line) => matchesItem(line.itemId) && matchesCategory(line.itemId)).map((line) => {
           const item = itemById(line.itemId);
-          const cost = Number(item?.buyingPrice ?? line.buyingPrice ?? 0) * Number(line.qty || 0);
+          const cost = Number(line.buyingPrice ?? item?.buyingPrice ?? 0) * Number(line.qty || 0);
           const profit = Number(line.total || 0) - cost;
           return {
             Date: formatDate(sale.saleDate),
@@ -695,7 +695,7 @@ function buildReportRows(
       state.sales.filter((sale) => inRange(sale.saleDate) && matchesLocation(sale.locationId)).forEach((sale) => {
         sale.items.filter((line) => matchesItem(line.itemId) && matchesCategory(line.itemId)).forEach((line) => {
           const item = itemById(line.itemId);
-          const cost = Number(item?.buyingPrice ?? line.buyingPrice ?? 0) * Number(line.qty || 0);
+          const cost = Number(line.buyingPrice ?? item?.buyingPrice ?? 0) * Number(line.qty || 0);
           const entry = grouped.get(line.itemId) || { item: line.itemName || item?.name || line.itemId, qty: 0, amount: 0, profit: 0 };
           entry.qty += line.qty;
           entry.amount += line.total;

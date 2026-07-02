@@ -9,7 +9,7 @@ import Link from "next/link";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useAppData } from "@/lib/client/useAppData";
 import { motion, AnimatePresence } from "motion/react";
-import { paginateRows, saleItemSummary, saleProfit } from "@/lib/sales-utils";
+import { paginateRows, saleCost, saleItemSummary, saleProfit } from "@/lib/sales-utils";
 
 export default function SalesListPage() {
   const { sales, currentLocation, locations, customers, products = [], items = [], deleteSale } = useAppData();
@@ -74,6 +74,7 @@ export default function SalesListPage() {
 
   const stats = {
     total: filteredSales.reduce((acc, s) => acc + s.totalAmount, 0),
+    cost: filteredSales.reduce((acc, s) => acc + saleCost(s), 0),
     profit: filteredSales.reduce((acc, s) => acc + saleProfit(s), 0),
     completed: filteredSales.length,
     outstanding: filteredSales.reduce((acc, s) => acc + s.creditAmount, 0),
@@ -102,8 +103,9 @@ export default function SalesListPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
         <StatCard title="Total Revenue" value={formatCurrency(stats.total)} icon={ShoppingCart} />
+        <StatCard title="Buying Cost" value={formatCurrency(stats.cost)} icon={Package} color="amber" />
         <StatCard title="Total Profit" value={formatCurrency(stats.profit)} icon={ArrowUpRight} color="emerald" />
         <StatCard title="Tx Volume" value={stats.completed} icon={ArrowUpRight} color="emerald" />
         <StatCard title="Consumer Debt" value={formatCurrency(stats.outstanding)} icon={CreditCard} color="amber" />
@@ -153,6 +155,7 @@ export default function SalesListPage() {
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Payment Method</th>
                 <th className="px-6 py-4 text-left text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Bank Account</th>
                 <th className="px-6 py-4 text-right text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Total Amount</th>
+                <th className="px-6 py-4 text-right text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Buying Total</th>
                 <th className="px-6 py-4 text-right text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Profit</th>
                 <th className="px-6 py-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-center text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Actions</th>
@@ -161,13 +164,14 @@ export default function SalesListPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
               {filteredSales.length === 0 ? (
                 <tr>
-                  <td colSpan={!locationId ? 10 : 9} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest opacity-50">
+                  <td colSpan={!locationId ? 11 : 10} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest opacity-50">
                     No transactions captured
                   </td>
                 </tr>
               ) : (
                 pagedSales.rows.map((sale) => {
                   const customer = customers.find(c => c.id === sale.customerId);
+                  const buyingTotal = saleCost(sale);
                   return (
                     <tr key={sale.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
                       <td className="px-6 py-4">
@@ -205,6 +209,7 @@ export default function SalesListPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right text-xs font-black text-slate-900 dark:text-zinc-100">{formatCurrency(sale.totalAmount)}</td>
+                      <td className="px-6 py-4 text-right text-xs font-black text-slate-600 dark:text-zinc-300">{formatCurrency(buyingTotal)}</td>
                       <td className="px-6 py-4 text-right text-xs font-black text-emerald-600">{formatCurrency(saleProfit(sale))}</td>
                       <td className="px-6 py-4 text-center">
                         <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-700/20 dark:text-emerald-400">

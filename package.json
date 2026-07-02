@@ -12,6 +12,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:clean-categories": "tsx scripts/clean-categories.ts",
+    "db:backfill-sale-costs": "tsx scripts/backfill-sale-item-buying-price.ts",
     "postinstall": "prisma generate --schema=\"$INIT_CWD/prisma/schema.prisma\"",
     "lint": "tsc --noEmit"
   },
